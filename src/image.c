@@ -126,6 +126,8 @@ bool load_image(const char *path, Image *image)
         return false;
     }
 
+    image->max = atoi(properties[2]);
+
     // read width and height
     char *p;
     p = strtok(properties[1], " ");
@@ -144,5 +146,19 @@ bool load_image(const char *path, Image *image)
     fread(image->content, 1, n_bytes, file);
 
     free_load_resources(line, file, properties);
+    return true;
+}
+
+bool image_as_float(FImage *fimage, Image *image)
+{
+    fimage->width = image->width;
+    fimage->height = image->height;
+    fimage->channels = image->channels;
+
+    unsigned int nbytes = fimage->channels * fimage->width * fimage->height;
+    fimage->content = (float*)calloc(nbytes, sizeof(float));
+    for (unsigned int i = 0; i<nbytes; ++i) {
+        *(fimage->content + i) = (float)*(image->content + i) / (float)image->max;
+    }
     return true;
 }
