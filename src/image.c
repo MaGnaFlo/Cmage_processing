@@ -4,6 +4,8 @@
 #include <ctype.h>
 #include <string.h>
 #include "image.h"
+#include <png.h>
+#include <math.h>
 
 #define P2 "P2"
 #define P3 "P3"
@@ -126,6 +128,7 @@ bool load_image(const char *path, Image *image)
         return false;
     }
 
+    image->type = strdup(properties[0]);
     image->max = atoi(properties[2]);
 
     // read width and height
@@ -149,8 +152,60 @@ bool load_image(const char *path, Image *image)
     return true;
 }
 
-bool image_as_float(FImage *fimage, Image *image)
+bool save_image(const char *name, Image *image)
 {
+    // find correct extension based on type
+    char *extension = (char*)malloc(5);
+    if (!extension) {
+        perror("Error allocating memory for extension.");
+        return false;
+    }
+    if (strcmp(image->type, P2) == 0 || strcmp(image->type, P5) == 0) {
+        strcpy(extension, ".pgm");
+    } else if (strcmp(image->type, P3) == 0 || strcmp(image->type, P6) == 0) {
+        strcpy(extension, ".ppm");
+    } else {
+        perror("Image type not recognized.");
+        free(extension);
+        return false;
+    }
+    char *path = (char*)malloc(strlen(name)+strlen(extension)+1);
+    if (!path) {
+        perror("Error allocating memory for image path.");
+        free(extension);
+        return false;
+    }
+    strcpy(path, name);
+    strcat(path, extension);
+
+    // file
+    FILE *file;
+    file = fopen(path, "w");
+    if (file == NULL) {
+        perror("Could not open file.");
+        free(extension);
+        free(path);
+        return false;
+    }
+
+    // header
+    fprintf(file, "%s\n", image->type);
+    fprintf(file, "%d %d\n", image->width, image->height);
+    fprintf(file, "%d\n", image->max);
+    
+    // data
+    fwrite(image->content, sizeof(unsigned char), image->channels * image->width * image->height, file);
+
+    // clear
+    free(extension);   
+    free(path);
+    fclose(file);
+    return true;
+}
+
+bool to_FImage(FImage *fimage, Image *image)
+{
+    fimage->type = image->type;
     fimage->width = image->width;
     fimage->height = image->height;
     fimage->channels = image->channels;
@@ -160,5 +215,69 @@ bool image_as_float(FImage *fimage, Image *image)
     for (unsigned int i = 0; i<nbytes; ++i) {
         *(fimage->content + i) = (float)*(image->content + i) / (float)image->max;
     }
+    return true;
+}
+
+bool image_to_png(Image *image, const char *png_file_path)
+{
+    // initialize png struct
+    png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    if (!png_ptr) {
+        perror("Error creating PNG struct.");
+        return false;
+    }
+
+    // initialize info struct
+    png_infop info_ptr = png_create_info_struct(png_ptr);
+    if (!info_ptr) {
+        perror("Error creating PNG info struct.");
+        return false;
+    }
+
+    // handle possible errors
+    if (setjmp(png_jmpbuf(png_ptr))) {
+        perror("Error creating PNG.");
+        png_destroy_write_struct(&png_ptr, &info_ptr);
+        return false;
+    }
+
+    // png file
+    FILE *png = fopen(png_file_path, "wb");
+    if (!png) {
+        perror("Error opening PNG file for writing.");
+        return false;
+    }
+
+    // init I/O
+    png_init_io(png_ptr, png);
+
+    // set image info
+    int color_type;
+    if (strcmp(image->type, P2) == 0 || strcmp(image->type, P5) == 0) {
+        color_type = PNG_COLOR_TYPE_GRAY;
+    } else if (strcmp(image->type, P3) == 0 || strcmp(image->type, P6) == 0) {
+        color_type = PNG_COLOR_TYPE_RGB;
+    } else {
+        fprintf(stderr, "Image type '%s' not recognized.\n", image->type);
+    }
+    int bit_depth = (int)log2((double)image->max + 1);
+    png_set_IHDR(png_ptr, info_ptr, image->width, image->height, bit_depth, 
+                 color_type, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
+                 PNG_FILTER_TYPE_DEFAULT);
+    png_write_info(png_ptr, info_ptr);
+
+    // write image data
+    png_bytep row = (png_bytep)malloc(image->channels * image->width);
+    for (int j = 0; j<image->height; ++j) {
+        memcpy(row, image->content + j * image->width * image->channels, image->channels * image->width);
+        png_write_row(png_ptr, row);
+    }
+    png_write_end(png_ptr, info_ptr);
+
+    // clear
+    free(row);
+    png_destroy_write_struct(&png_ptr, &info_ptr);
+    fclose(png);
+
     return true;
 }
