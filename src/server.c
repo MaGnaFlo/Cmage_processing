@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <stdarg.h>
 #include "server.h"
+#include "image.h"
 
 #define IMAGES_PATH "../images/"
 #define INDEX "../front/index.html"
@@ -16,7 +17,7 @@
 #define MIME_SCRIPT "application/javascript"
 #define MIME_PNG "image/png"
 #define ERROR_PAGE "<html><body>An internal server error has occurred!</body></html>"
-
+#define TEMP_LOADED_IMG "loaded_img.png"
 
 /// @brief Creates a response given a request
 /// @param connection Connection
@@ -127,8 +128,20 @@ answer_to_image(struct MHD_Connection *connection, const char *url)
     char *relative_path = (char*)malloc(strlen(IMAGES_PATH));
     strcpy(relative_path, IMAGES_PATH);
     strcat(relative_path, img_name);
+
+    // we actually have to perform a conversion since HTML is not happy with PPM/PGM
+    Image image;
+    if (!load_image(relative_path, &image)) {
+        perror("Could not properly load image.");
+        return MHD_NO;
+    }
+    if (image_to_png(&image, TEMP_LOADED_IMG)) {
+        perror("An error occurred during PNG conversion.");
+        return MHD_NO;
+    }
+    free_image(&image);
     
-    if (-1 == (fd = open(relative_path, O_RDONLY)) || (0 != fstat(fd, &sbuf))) {
+    if (-1 == (fd = open(TEMP_LOADED_IMG, O_RDONLY)) || (0 != fstat(fd, &sbuf))) {
         // error accessing file
         if (fd != -1) {
             close(fd);
@@ -137,7 +150,7 @@ answer_to_image(struct MHD_Connection *connection, const char *url)
                               3, strlen(ERROR_PAGE), (void*)ERROR_PAGE, MHD_RESPMEM_PERSISTENT);
     }
     
-    ret = create_response(connection, MIME_HTML, MHD_HTTP_OK, "from_fd", 3, sbuf.st_size, fd, 0);
+    ret = create_response(connection, MIME_PNG, MHD_HTTP_OK, "from_fd", 3, sbuf.st_size, fd, 0);
     return ret;
 }
 

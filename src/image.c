@@ -203,6 +203,12 @@ bool save_image(const char *name, Image *image)
     return true;
 }
 
+void free_image(Image *image)
+{
+    free(image->type);
+    free(image->content);
+}
+
 bool to_FImage(FImage *fimage, Image *image)
 {
     fimage->type = image->type;

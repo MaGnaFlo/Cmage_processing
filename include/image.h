@@ -33,6 +33,10 @@ extern bool load_image(const char *path, Image *image);
 /// @return true if save ok
 extern bool save_image(const char *name, Image *image);
 
+/// @brief Frees image data
+/// @param image  
+extern void free_image(Image *image);
+
 /// @brief Converts an Image into an FImage
 /// @param fimage Float image
 /// @param image Unsigned char (or uint8_t) image
