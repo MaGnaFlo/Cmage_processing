@@ -7,13 +7,6 @@
 #include <png.h>
 #include <math.h>
 
-#define P2 "P2"
-#define P3 "P3"
-#define P5 "P5"
-#define P6 "P6"
-#define BINARY  0x1
-#define ASCII   0x2
-
 /// @brief Reads the next line of a FILE and removed whitespaces before and after
 /// @param line 
 /// @param len 
@@ -23,7 +16,7 @@ static ssize_t get_trimmed_line(char** line, size_t *len, FILE *file)
 {
     int read = getline(line, len, file);
     if (read == -1) {
-        perror("Error reading file.");
+        perror("Error reading file");
         return 0;
     }
 
@@ -75,14 +68,14 @@ bool read_header(char **line, size_t *len, FILE *file, char *properties[3])
     while (i<3) {
         read = get_trimmed_line(line, len, file);
         if (read == -1) {
-            perror("Error reading line.");
+            perror("Error reading line");
             return false;
         }
         if (*line[0] == '#') continue; // skip comments
 
         properties[i] = strdup(*line);
         if (properties[i] == NULL) {
-            perror("Memory allocation failed.");
+            perror("Memory allocation failed");
             return false;
         }
         ++i;
@@ -90,88 +83,83 @@ bool read_header(char **line, size_t *len, FILE *file, char *properties[3])
     return true;
 }
 
-bool load_image(const char *path, Image *image)
+bool load_image(Image *image, const char *path)
 {
     FILE *file;
     file = fopen(path, "r");
     if (file == NULL) {
-        perror("Could not open file.");
+        perror("Could not open file");
         return false;
     }
 
+    // properties
     char *line = NULL;
     size_t len = 0;
     char *properties[3] = {NULL, NULL, NULL};
     if (!read_header(&line, &len, file, properties)) {
-        perror("Could not read file header.");
+        perror("Could not read file header");
         free_load_resources(line, file, properties);
         return false;
     }
 
-    // type and channels
-    int type = 0x0;
-    if (strcmp(properties[0], P2) == 0) {
-        type = ASCII;
-        image->channels = 1;
-    } else if (strcmp(properties[0], P3) == 0) {
-        type = ASCII;
-        image->channels = 3;
-    } else if (strcmp(properties[0], P5) == 0) {
-        type = BINARY;
-        image->channels = 1;
-    } else if (strcmp(properties[0], P6) == 0) {
-        type = BINARY;
-        image->channels = 3;
+    int width, height, channels;
+    if (strcmp(properties[0], "P2") == 0 || strcmp(properties[0], "P5") == 0) {
+        channels = 1;
+    } else if (strcmp(properties[0], "P3") == 0 || strcmp(properties[0], "P6") == 0) {
+        channels = 3;
     } else {
-        perror("Unknown image type.");
+        perror("Unknown image type");
         free_load_resources(line, file, properties);
         return false;
     }
 
-    image->type = strdup(properties[0]);
-    image->max = atoi(properties[2]);
-
-    // read width and height
+    // width and height
     char *p;
     p = strtok(properties[1], " ");
-    if (p) image->width = atoi(p);
+    if (p) width = atoi(p);
     p = strtok(NULL, " ");
-    if (p) image->height = atoi(p);
+    if (p) height = atoi(p);
+
+    // create image
+    create_image(image, properties[0], width, height, channels);
 
     // read content
-    size_t n_bytes = image->channels * image->width * image->height;
-    image->content = (unsigned char*)malloc(n_bytes);
     if (image->content == NULL) {
-        perror("Failed to allocate memory for image content.");
+        perror("Failed to allocate memory for image content");
         free_load_resources(line, file, properties);
         return false;
     }
-    fread(image->content, 1, n_bytes, file);
+
+    unsigned char *uchar_content = malloc(width * height * channels);
+    fread(uchar_content, 1, width * height * channels, file);
+    for (size_t i = 0; i<width*height*channels; ++i) {
+        image->content[i] = (float)uchar_content[i] / 255.0;
+    }
 
     free_load_resources(line, file, properties);
     return true;
 }
 
-bool save_image(const char *name, Image *image)
+bool save_image(Image *image, const char *name)
 {
     // find correct extension based on type
     char *extension = (char*)malloc(5);
     if (!extension) {
-        perror("Error allocating memory for extension.");
+        perror("Error allocating memory for extension");
         return false;
     }
-    if (strcmp(image->type, P2) == 0 || strcmp(image->type, P5) == 0) {
+    if (strcmp(image->type, "P2") == 0 || strcmp(image->type, "P5") == 0) {
         strcpy(extension, ".pgm");
-    } else if (strcmp(image->type, P3) == 0 || strcmp(image->type, P6) == 0) {
+    } else if (strcmp(image->type, "P3") == 0 || strcmp(image->type, "P6") == 0) {
         strcpy(extension, ".ppm");
     } else {
-        perror("Image type not recognized.");
+        perror("Image type not recognized");
         free(extension);
         return false;
     }
     char *path = (char*)malloc(strlen(name)+strlen(extension)+1);
     if (!path) {
-        perror("Error allocating memory for image path.");
+        perror("Error allocating memory for image path");
         free(extension);
         return false;
     }
@@ -182,19 +170,19 @@ bool save_image(const char *name, Image *image)
     FILE *file;
     file = fopen(path, "w");
     if (file == NULL) {
-        perror("Could not open file.");
+        perror("Could not open file");
         free(extension);
         free(path);
         return false;
     }
-
-    // header
-    fprintf(file, "%s\n", image->type);
-    fprintf(file, "%d %d\n", image->width, image->height);
-    fprintf(file, "%d\n", image->max);
     
     // data
-    fwrite(image->content, sizeof(unsigned char), image->channels * image->width * image->height, file);
+    unsigned char *uchar_content = malloc(image->channels * image->width * image->height);
+    for (size_t i = 0; i<image->channels * image->width * image->height; ++i) {
+        uchar_content[i] = (unsigned char)(255 * image->content[i]);
+    }
+    fwrite(uchar_content, sizeof(unsigned char), image->channels * image->width * image->height, file);
+    free(uchar_content);
 
     // clear
     free(extension);   
@@ -203,25 +191,19 @@ bool save_image(const char *name, Image *image)
     return true;
 }
 
+void create_image(Image *image, char *type, int width, int height, int channels)
+{
+    image->type = strdup(type);
+    image->width = width;
+    image->height = height;
+    image->channels = channels;
+    image->content = (double *)malloc(width * height * channels * sizeof(double));
+}
+
 void free_image(Image *image)
 {
     free(image->type);
     free(image->content);
-}
-
-bool to_FImage(FImage *fimage, Image *image)
-{
-    fimage->type = image->type;
-    fimage->width = image->width;
-    fimage->height = image->height;
-    fimage->channels = image->channels;
-
-    unsigned int nbytes = fimage->channels * fimage->width * fimage->height;
-    fimage->content = (float*)calloc(nbytes, sizeof(float));
-    for (unsigned int i = 0; i<nbytes; ++i) {
-        *(fimage->content + i) = (float)*(image->content + i) / (float)image->max;
-    }
-    return true;
 }
 
 bool image_to_png(Image *image, const char *png_file_path)
@@ -229,20 +211,20 @@ bool image_to_png(Image *image, const char *png_file_path)
     // initialize png struct
     png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
     if (!png_ptr) {
-        perror("Error creating PNG struct.");
+        perror("Error creating PNG struct");
         return false;
     }
 
     // initialize info struct
     png_infop info_ptr = png_create_info_struct(png_ptr);
     if (!info_ptr) {
-        perror("Error creating PNG info struct.");
+        perror("Error creating PNG info struct");
         return false;
     }
 
     // handle possible errors
     if (setjmp(png_jmpbuf(png_ptr))) {
-        perror("Error creating PNG.");
+        perror("Error creating PNG");
         png_destroy_write_struct(&png_ptr, &info_ptr);
         return false;
     }
@@ -250,7 +232,7 @@ bool image_to_png(Image *image, const char *png_file_path)
     // png file
     FILE *png = fopen(png_file_path, "wb");
     if (!png) {
-        perror("Error opening PNG file for writing.");
+        perror("Error opening PNG file for writing");
         return false;
     }
 
@@ -259,31 +241,42 @@ bool image_to_png(Image *image, const char *png_file_path)
 
     // set image info
     int color_type;
-    if (strcmp(image->type, P2) == 0 || strcmp(image->type, P5) == 0) {
+    if (strcmp(image->type, "P2") == 0 || strcmp(image->type, "P5") == 0) {
         color_type = PNG_COLOR_TYPE_GRAY;
-    } else if (strcmp(image->type, P3) == 0 || strcmp(image->type, P6) == 0) {
+    } else if (strcmp(image->type, "P3") == 0 || strcmp(image->type, "P6") == 0) {
         color_type = PNG_COLOR_TYPE_RGB;
     } else {
         fprintf(stderr, "Image type '%s' not recognized.\n", image->type);
     }
-    int bit_depth = (int)log2((double)image->max + 1);
-    png_set_IHDR(png_ptr, info_ptr, image->width, image->height, bit_depth, 
+    png_set_IHDR(png_ptr, info_ptr, image->width, image->height, 8, 
                  color_type, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
                  PNG_FILTER_TYPE_DEFAULT);
     png_write_info(png_ptr, info_ptr);
 
-    // write image data
+    // write image data (convert in uchar first)
+    unsigned char *uchar_content = malloc(image->channels * image->width * image->height);
+    for (size_t i = 0; i<image->channels * image->width * image->height; ++i) {
+        uchar_content[i] = (unsigned char)(255 * image->content[i]);
+    }
     png_bytep row = (png_bytep)malloc(image->channels * image->width);
     for (int j = 0; j<image->height; ++j) {
-        memcpy(row, image->content + j * image->width * image->channels, image->channels * image->width);
+        memcpy(row, uchar_content + j * image->width * image->channels, image->channels * image->width);
         png_write_row(png_ptr, row);
     }
     png_write_end(png_ptr, info_ptr);
 
     // clear
+    free(uchar_content);
     free(row);
     png_destroy_write_struct(&png_ptr, &info_ptr);
     fclose(png);
 
     return true;
+}
+
+void print_image(Image *image)
+{
+    printf("%s, %d, %d, %d\n", image->type, image->width, image->height, image->channels);
+    for (int i = 0; i<10; ++i) printf("%f ", image->content[i]);
+    printf("\n");
 }

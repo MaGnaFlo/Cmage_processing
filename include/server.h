@@ -1,6 +1,7 @@
 #include <sys/types.h>
 #include <microhttpd.h>
 
+/// @brief Main connection method
 extern 
 enum MHD_Result 
 answer_to_connection(void *cls,

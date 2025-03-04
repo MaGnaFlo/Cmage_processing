@@ -8,6 +8,7 @@
 #include <stdarg.h>
 #include "server.h"
 #include "image.h"
+#include "transform.h"
 
 #define IMAGES_PATH "../images/"
 #define INDEX "../front/index.html"
@@ -131,12 +132,12 @@ answer_to_image(struct MHD_Connection *connection, const char *url)
 
     // we actually have to perform a conversion since HTML is not happy with PPM/PGM
     Image image;
-    if (!load_image(relative_path, &image)) {
-        perror("Could not properly load image.");
+    if (!load_image(&image, relative_path)) {
+        perror("Could not properly load image");
         return MHD_NO;
     }
-    if (image_to_png(&image, TEMP_LOADED_IMG)) {
-        perror("An error occurred during PNG conversion.");
+    if (!image_to_png(&image, TEMP_LOADED_IMG)) {
+        perror("An error occurred during PNG conversion");
         return MHD_NO;
     }
     free_image(&image);
