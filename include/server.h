@@ -1,4 +1,5 @@
-#include <microhttpd.h>
+
+struct MHD_Connection;
 
 /// @brief Main connection method
 extern 

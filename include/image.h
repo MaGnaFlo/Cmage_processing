@@ -32,7 +32,6 @@ extern bool save_image(Image *image, const char *name);
 /// @param width 
 /// @param height 
 /// @param channels 
-/// @param max 
 extern void create_image(Image *image, char *type, int width, int height, int channels);
 
 /// @brief Frees image data
