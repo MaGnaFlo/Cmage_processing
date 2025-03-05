@@ -10,15 +10,21 @@
 #include "image.h"
 #include "transform.h"
 
-#define IMAGES_PATH "../images/"
-#define INDEX "../front/index.html"
-#define SCRIPTS "../front/scripts.js"
-#define MIME_TEXT "text/plain"
-#define MIME_HTML "text/html"
-#define MIME_SCRIPT "application/javascript"
-#define MIME_PNG "image/png"
-#define ERROR_PAGE "<html><body>An internal server error has occurred!</body></html>"
-#define TEMP_LOADED_IMG "loaded_img.png"
+// paths
+static const char * const IMAGES_PATH = "../images/";
+static const char * const INDEX = "../front/index.html";
+static const char * const SCRIPTS = "../front/scripts.js";
+// MIME data
+static const char * const MIME_TEXT = "text/plain";
+static const char * const MIME_HTML = "text/html";
+static const char * const MIME_SCRIPT = "application/javascript";
+static const char * const MIME_PNG = "image/png";
+// connection type for response
+static const char * const FROM_BUFFER = "from_buffer";
+static const char * const FROM_FD = "from_fd";
+// defaults and temporary
+static const char * const ERROR_PAGE = "<html><body>An internal server error has occurred!</body></html>";
+static const char * const TEMP_LOADED_IMG = "loaded_img.png";
 
 /// @brief Creates a response given a request
 /// @param connection Connection
@@ -40,12 +46,12 @@ create_response(struct MHD_Connection *connection,
     va_list args;
     va_start(args, argcount);
     struct MHD_Response *response = NULL;
-    if (strcmp(response_type, "from_buffer") == 0 && argcount == 3) {
+    if (strcmp(response_type, FROM_BUFFER) == 0 && argcount == 3) {
         size_t size = va_arg(args, size_t);
         char *buffer = va_arg(args, char *);
         enum MHD_ResponseMemoryMode mem_mode = va_arg(args, enum MHD_ResponseMemoryMode);
         response = MHD_create_response_from_buffer(size, buffer, mem_mode);
-    } else if (strcmp(response_type, "from_fd") == 0 && argcount == 3) {
+    } else if (strcmp(response_type, FROM_FD) == 0 && argcount == 3) {
         size_t size = va_arg(args, size_t);
         int fd = va_arg(args, int);
         off_t offset = va_arg(args, off_t);
@@ -77,7 +83,7 @@ answer_to_root(struct MHD_Connection *connection)
         if (fd != -1) {
             close(fd);
         }
-        ret = create_response(connection, MIME_TEXT, MHD_HTTP_INTERNAL_SERVER_ERROR, "from_buffer", 
+        ret = create_response(connection, MIME_TEXT, MHD_HTTP_INTERNAL_SERVER_ERROR, FROM_BUFFER, 
                               3, strlen(ERROR_PAGE), (void*)ERROR_PAGE, MHD_RESPMEM_PERSISTENT);
     }
 
@@ -85,7 +91,7 @@ answer_to_root(struct MHD_Connection *connection)
     read(fd, buffer, sbuf.st_size);
     close(fd);
 
-    ret = create_response(connection, MIME_HTML, MHD_HTTP_OK, "from_buffer", 
+    ret = create_response(connection, MIME_HTML, MHD_HTTP_OK, FROM_BUFFER, 
                           3, sbuf.st_size, buffer, MHD_RESPMEM_MUST_FREE);
     return ret;
 }
@@ -103,7 +109,7 @@ answer_to_script(struct MHD_Connection *connection)
         if (fd != -1) {
             close(fd);
         }
-        ret = create_response(connection, MIME_TEXT, MHD_HTTP_INTERNAL_SERVER_ERROR, "from_buffer", 
+        ret = create_response(connection, MIME_TEXT, MHD_HTTP_INTERNAL_SERVER_ERROR, FROM_BUFFER, 
                               3, strlen(ERROR_PAGE), (void*)ERROR_PAGE, MHD_RESPMEM_PERSISTENT);
     }
 
@@ -111,7 +117,7 @@ answer_to_script(struct MHD_Connection *connection)
     read(fd, buffer, sbuf.st_size);
     close(fd);
 
-    ret = create_response(connection, MIME_HTML, MHD_HTTP_OK, "from_buffer", 3, sbuf.st_size, buffer, MHD_RESPMEM_MUST_FREE);
+    ret = create_response(connection, MIME_HTML, MHD_HTTP_OK, FROM_BUFFER, 3, sbuf.st_size, buffer, MHD_RESPMEM_MUST_FREE);
     return ret;
 }
 
@@ -147,11 +153,11 @@ answer_to_image(struct MHD_Connection *connection, const char *url)
         if (fd != -1) {
             close(fd);
         }
-        ret = create_response(connection, MIME_TEXT, MHD_HTTP_INTERNAL_SERVER_ERROR, "from_buffer", 
+        ret = create_response(connection, MIME_TEXT, MHD_HTTP_INTERNAL_SERVER_ERROR, FROM_BUFFER, 
                               3, strlen(ERROR_PAGE), (void*)ERROR_PAGE, MHD_RESPMEM_PERSISTENT);
     }
     
-    ret = create_response(connection, MIME_PNG, MHD_HTTP_OK, "from_fd", 3, sbuf.st_size, fd, 0);
+    ret = create_response(connection, MIME_PNG, MHD_HTTP_OK, FROM_FD, 3, sbuf.st_size, fd, 0);
     return ret;
 }
 
@@ -162,7 +168,7 @@ answer_to_unknown(struct MHD_Connection *connection)
     int ret;
     const char *empty = "";
     struct MHD_Response *response;
-    ret = create_response(connection, MIME_TEXT, MHD_HTTP_INTERNAL_SERVER_ERROR, "from_buffer", 
+    ret = create_response(connection, MIME_TEXT, MHD_HTTP_INTERNAL_SERVER_ERROR, FROM_BUFFER, 
                           3, 0, (void *)empty, MHD_RESPMEM_PERSISTENT);
     return ret;
 }

@@ -1,4 +1,3 @@
-#include <sys/types.h>
 #include <microhttpd.h>
 
 /// @brief Main connection method

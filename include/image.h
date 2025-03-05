@@ -1,6 +1,4 @@
-#include <stdlib.h>
 #include <stdbool.h>
-
 
 /// @brief Image structure
 typedef struct Image {
