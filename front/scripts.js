@@ -5,7 +5,17 @@ function requestImage() {
     .then(response => response.blob())
     .then(blob => {
         const imgUrl = URL.createObjectURL(blob);
-        document.getElementById("imageContainer").src = imgUrl;
+        document.getElementById("original_img").src = imgUrl;
 
+    })
+}
+
+function transform() {
+    transform_type = document.getElementById("transform_select").value;
+    fetch("/transform/" + transform_type)
+    .then(response => response.blob())
+    .then(blob => {
+        const imgUrl = URL.createObjectURL(blob);
+        document.getElementById("transformed_img").src = imgUrl;
     })
 }

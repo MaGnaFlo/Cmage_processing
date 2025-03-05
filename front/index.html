@@ -1,11 +1,47 @@
 <!DOCTYPE html>
-<head>
-    <title>CmageProcessing</title>
+<html>
+    <head title="CMage Processing"></head>
+    <style>
+        .header {
+            background-color: beige;
+            text-align: center;
+            padding: 20px;
+            font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+        }
+        .frame {
+            background-color: beige;
+            text-align: center;
+            padding: 20px;
+            width: 600px;
+            display: table-cell;
+            font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+        }
+    </style>
     <script src="scripts.js"></script>
-</head>
-<body>
-    <p>Hello!</p>
-    <input id="input_file" type="file" accept=".ppm,.pgm">
-    <button onclick="requestImage()">Request image</button>
-    <img id="imageContainer" alt="image here"></p>
-</body>
+    <body>
+        <header class="header">
+            <h1>CMage Processing</h1>
+        </header>
+        <main style="font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;">
+            <p>Select original image: <input id="input_file" type="file" onchange="requestImage()"></p>
+            <p>
+                Select transformation:
+                <select name="Transform" id="transform_select">
+                    <option value="default">Select</option>
+                    <option value="rgb2gray">RGB to gray</option>
+                </select>
+                <button id="transform" onclick="transform()">Go!</button>
+            </p>
+            <div style="width: 100%; display: table;">
+                <div class="frame">
+                    <p>Original image</p>
+                    <img id="original_img" src="" style="max-width: 300px;">
+                </div>
+                <div class="frame">
+                    <p>Transformed image</p>
+                    <img id="transformed_img" src="">
+                </div>
+            </div>
+        </main>
+    </body>
+</html>
