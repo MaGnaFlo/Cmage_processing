@@ -177,11 +177,14 @@ bool save_image(Image *image, const char *name)
     }
     
     // data
-    unsigned char *uchar_content = malloc(image->channels * image->width * image->height);
-    for (size_t i = 0; i<image->channels * image->width * image->height; ++i) {
+    unsigned char *uchar_content = malloc(image->width * image->height * image->channels);
+    for (size_t i = 0; i<image->width * image->height * image->channels; ++i) {
         uchar_content[i] = (unsigned char)(255 * image->content[i]);
     }
-    fwrite(uchar_content, sizeof(unsigned char), image->channels * image->width * image->height, file);
+    fprintf(file, "%s\n", image->type);
+    fprintf(file, "%d %d\n", image->width, image->height);
+    fprintf(file, "255\n");
+    fwrite(uchar_content, sizeof(unsigned char), image->width * image->height * image->channels, file);
     free(uchar_content);
 
     // clear
@@ -254,8 +257,8 @@ bool image_to_png(Image *image, const char *png_file_path)
     png_write_info(png_ptr, info_ptr);
 
     // write image data (convert in uchar first)
-    unsigned char *uchar_content = malloc(image->channels * image->width * image->height);
-    for (size_t i = 0; i<image->channels * image->width * image->height; ++i) {
+    unsigned char *uchar_content = malloc(image->width * image->height * image->channels);
+    for (size_t i = 0; i<image->width * image->height * image->channels; ++i) {
         uchar_content[i] = (unsigned char)(255 * image->content[i]);
     }
     png_bytep row = (png_bytep)malloc(image->channels * image->width);
