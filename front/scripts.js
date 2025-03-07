@@ -11,8 +11,9 @@ function requestImage() {
 }
 
 function transform() {
+    img_file = document.getElementById("input_file").files[0].name;
     transform_type = document.getElementById("transform_select").value;
-    fetch("/transform/" + transform_type)
+    fetch("/" + img_file + "/transform/" + transform_type)
     .then(response => response.blob())
     .then(blob => {
         const imgUrl = URL.createObjectURL(blob);

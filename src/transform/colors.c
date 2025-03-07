@@ -1,7 +1,7 @@
-#include "transform.h"
-#include "image.h"
 #include <string.h>
 #include <stdio.h>
+#include "image/image.h"
+#include "transform/colors.h"
 
 bool rgb_to_gray(Image *dest, Image *src)
 {

@@ -3,7 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <string.h>
-#include "image.h"
+#include "image/image.h"
 #include <png.h>
 #include <math.h>
 

@@ -1,6 +1,6 @@
 #include <stdio.h>
-#include "server.h"
 #include <microhttpd.h>
+#include "server/server.h"
 
 int main(int argc, char **argv)
 {

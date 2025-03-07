@@ -7,9 +7,9 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <stdarg.h>
-#include "server.h"
-#include "image.h"
-#include "transform.h"
+#include "server/server.h"
+#include "image/image.h"
+#include "transform/colors.h"
 
 // paths
 static const char * const IMAGES_PATH = "../images/";
@@ -137,17 +137,81 @@ answer_to_image(struct MHD_Connection *connection, const char *url)
     strcpy(relative_path, IMAGES_PATH);
     strcat(relative_path, img_name);
 
-    // we actually have to perform a conversion since HTML is not happy with PPM/PGM
     Image image;
     if (!load_image(&image, relative_path)) {
         perror("Could not properly load image");
         return MHD_NO;
     }
+    // we actually have to perform a conversion since HTML is not happy with PPM/PGM
     if (!image_to_png(&image, TEMP_LOADED_IMG)) {
         perror("An error occurred during PNG conversion");
         return MHD_NO;
     }
     free_image(&image);
+    
+    if (-1 == (fd = open(TEMP_LOADED_IMG, O_RDONLY)) || (0 != fstat(fd, &sbuf))) {
+        // error accessing file
+        if (fd != -1) {
+            close(fd);
+        }
+        ret = create_response(connection, MIME_TEXT, MHD_HTTP_INTERNAL_SERVER_ERROR, FROM_BUFFER, 
+                              3, strlen(ERROR_PAGE), (void*)ERROR_PAGE, MHD_RESPMEM_PERSISTENT);
+    }
+    
+    ret = create_response(connection, MIME_PNG, MHD_HTTP_OK, FROM_FD, 3, sbuf.st_size, fd, 0);
+    return ret;
+}
+
+static
+enum MHD_Result
+answer_to_transform(struct MHD_Connection *connection, const char *url)
+{
+    struct MHD_Response *response;
+    int fd, ret;
+    struct stat sbuf;
+
+    // parse url
+    char *transform_type;
+    char *url_ = strdup(url);
+    char *token = strtok(url_, "/");
+    char *image_name = strdup(token);
+    char *image_path = (char*)malloc(strlen(IMAGES_PATH)+strlen(image_name));
+    strcpy(image_path, IMAGES_PATH);
+    strcat(image_path, image_name);
+    int i = 1;
+    while (token) {
+        token = strtok(NULL, "/");
+        switch (i++) {
+            case 2: transform_type = strdup(token); break;
+            default: break;
+        }
+    }
+
+    Image image;
+    if (!load_image(&image, image_path)) {
+        perror("Could not properly load image");
+        return MHD_NO;
+    }
+
+    Image transformed;
+    if (strcmp(transform_type, "rgb2gray") == 0) { // obviously find a cleaner method
+        if (!rgb_to_gray(&transformed, &image)) {
+            return MHD_NO;
+        }
+    }
+
+    free(url_);
+    free(image_name);
+    free(image_path);
+    free(transform_type);
+
+    // we actually have to perform a conversion since HTML is not happy with PPM/PGM
+    if (!image_to_png(&transformed, TEMP_LOADED_IMG)) {
+        perror("An error occurred during PNG conversion");
+        return MHD_NO;
+    }
+    free_image(&image);
+    free_image(&transformed);
     
     if (-1 == (fd = open(TEMP_LOADED_IMG, O_RDONLY)) || (0 != fstat(fd, &sbuf))) {
         // error accessing file
@@ -196,6 +260,8 @@ answer_to_connection(void *cls,
             ret = answer_to_script(connection);
         } else if (strstr(url, "image") != NULL) {
             ret = answer_to_image(connection, url);
+        } else if (strstr(url, "transform") != NULL) {
+            ret = answer_to_transform(connection, url);
         } else {
             ret = answer_to_unknown(connection);
         }
