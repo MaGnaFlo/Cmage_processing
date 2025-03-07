@@ -218,7 +218,7 @@ answer_to_transform(struct MHD_Connection *connection, const char *url)
     typedef bool (*transform_fct)(Image *, Image *); // I might have to use extra args here
     void * fct = find_transform(transform_key);
     if (fct == NULL) {
-        perror("Unknown key for transform");
+        perror("Unknown transform key");
         free(url_);
         free(image_name);
         free(image_path);
