@@ -26,6 +26,34 @@ static const char * const FROM_FD = "from_fd";
 // defaults and temporary
 static const char * const ERROR_PAGE = "<html><body>An internal server error has occurred!</body></html>";
 static const char * const TEMP_LOADED_IMG = "loaded_img.png";
+// struct containing a pair of key-value for transforms
+typedef struct Transform {
+    const char * const key;
+    void * value;
+} Transform;
+// array of transforms
+static Transform transforms[1] = {
+    {.key = "rgb2gray", .value = &rgb_to_gray}
+};
+
+/// @brief Retrieves the transform given its key
+/// @param key Transform key
+/// @return Pointer to function
+static void * find_transform(const char * const key)
+{
+    if (sizeof(transforms) == 0) {
+        return NULL;
+    }
+    void * fct = NULL;
+    size_t n = sizeof(transforms) / sizeof(transforms[0]);
+    for (int i = 0; i<n; ++i) {
+        if (strcmp(transforms[i].key, key) == 0) {
+            fct = transforms[i].value;
+            break;
+        }
+    }
+    return fct;
+}
 
 /// @brief Creates a response given a request
 /// @param connection Connection
@@ -157,7 +185,6 @@ answer_to_image(struct MHD_Connection *connection, const char *url)
         ret = create_response(connection, MIME_TEXT, MHD_HTTP_INTERNAL_SERVER_ERROR, FROM_BUFFER, 
                               3, strlen(ERROR_PAGE), (void*)ERROR_PAGE, MHD_RESPMEM_PERSISTENT);
     }
-    
     ret = create_response(connection, MIME_PNG, MHD_HTTP_OK, FROM_FD, 3, sbuf.st_size, fd, 0);
     return ret;
 }
@@ -171,7 +198,7 @@ answer_to_transform(struct MHD_Connection *connection, const char *url)
     struct stat sbuf;
 
     // parse url
-    char *transform_type;
+    char *transform_key;
     char *url_ = strdup(url);
     char *token = strtok(url_, "/");
     char *image_name = strdup(token);
@@ -182,36 +209,59 @@ answer_to_transform(struct MHD_Connection *connection, const char *url)
     while (token) {
         token = strtok(NULL, "/");
         switch (i++) {
-            case 2: transform_type = strdup(token); break;
+            case 2: transform_key = strdup(token); break;
             default: break;
         }
     }
 
-    Image image;
-    if (!load_image(&image, image_path)) {
+    // find the appropriate transform function
+    typedef bool (*transform_fct)(Image *, Image *); // I might have to use extra args here
+    void * fct = find_transform(transform_key);
+    if (fct == NULL) {
+        perror("Unknown key for transform");
+        free(url_);
+        free(image_name);
+        free(image_path);
+        free(transform_key);
+        return MHD_NO;
+    }
+    transform_fct t_fct = (transform_fct)fct; // cast
+
+    // source
+    Image original_image;
+    if (!load_image(&original_image, image_path)) {
         perror("Could not properly load image");
+        free(url_);
+        free(image_name);
+        free(image_path);
+        free(transform_key);
         return MHD_NO;
     }
 
-    Image transformed;
-    if (strcmp(transform_type, "rgb2gray") == 0) { // obviously find a cleaner method
-        if (!rgb_to_gray(&transformed, &image)) {
-            return MHD_NO;
-        }
+    // dest
+    Image transformed_image;
+    if (!t_fct(&transformed_image, &original_image)) {
+        free(url_);
+        free(image_name);
+        free(image_path);
+        free(transform_key);
+        free_image(&original_image);
+        return MHD_NO;
     }
 
+    // clear
     free(url_);
     free(image_name);
     free(image_path);
-    free(transform_type);
+    free(transform_key);
 
     // we actually have to perform a conversion since HTML is not happy with PPM/PGM
-    if (!image_to_png(&transformed, TEMP_LOADED_IMG)) {
+    if (!image_to_png(&transformed_image, TEMP_LOADED_IMG)) {
         perror("An error occurred during PNG conversion");
         return MHD_NO;
     }
-    free_image(&image);
-    free_image(&transformed);
+    free_image(&original_image);
+    free_image(&transformed_image);
     
     if (-1 == (fd = open(TEMP_LOADED_IMG, O_RDONLY)) || (0 != fstat(fd, &sbuf))) {
         // error accessing file
@@ -221,7 +271,6 @@ answer_to_transform(struct MHD_Connection *connection, const char *url)
         ret = create_response(connection, MIME_TEXT, MHD_HTTP_INTERNAL_SERVER_ERROR, FROM_BUFFER, 
                               3, strlen(ERROR_PAGE), (void*)ERROR_PAGE, MHD_RESPMEM_PERSISTENT);
     }
-    
     ret = create_response(connection, MIME_PNG, MHD_HTTP_OK, FROM_FD, 3, sbuf.st_size, fd, 0);
     return ret;
 }
