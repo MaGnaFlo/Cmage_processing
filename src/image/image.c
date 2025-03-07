@@ -102,11 +102,14 @@ bool load_image(Image *image, const char *path)
         return false;
     }
 
+    IMAGE_TYPE type;
     int width, height, channels;
     if (strcmp(properties[0], "P2") == 0 || strcmp(properties[0], "P5") == 0) {
         channels = 1;
+        type = GRAY;
     } else if (strcmp(properties[0], "P3") == 0 || strcmp(properties[0], "P6") == 0) {
         channels = 3;
+        type = RGB;
     } else {
         perror("Unknown image type");
         free_load_resources(line, file, properties);
@@ -121,7 +124,7 @@ bool load_image(Image *image, const char *path)
     if (p) height = atoi(p);
 
     // create image
-    create_image(image, properties[0], width, height, channels);
+    create_image(image, type, width, height, channels);
 
     // read content
     if (image->content == NULL) {
@@ -148,15 +151,15 @@ bool save_image(Image *image, const char *name)
         perror("Error allocating memory for extension");
         return false;
     }
-    if (strcmp(image->type, "P2") == 0 || strcmp(image->type, "P5") == 0) {
-        strcpy(extension, ".pgm");
-    } else if (strcmp(image->type, "P3") == 0 || strcmp(image->type, "P6") == 0) {
-        strcpy(extension, ".ppm");
-    } else {
+    switch (image->type) {
+    case GRAY: strcpy(extension, ".pgm"); break;
+    case RGB: strcpy(extension, ".ppm"); break;
+    default:
         perror("Image type not recognized");
         free(extension);
         return false;
     }
+
     char *path = (char*)malloc(strlen(name)+strlen(extension)+1);
     if (!path) {
         perror("Error allocating memory for image path");
@@ -181,7 +184,15 @@ bool save_image(Image *image, const char *name)
     for (size_t i = 0; i<image->width * image->height * image->channels; ++i) {
         uchar_content[i] = (unsigned char)(255 * image->content[i]);
     }
-    fprintf(file, "%s\n", image->type);
+    switch (image->type) {
+        case GRAY:
+            fprintf(file, "%s\n", "P5");
+            break;
+        case RGB: [[fallthrough]];
+        default:
+            fprintf(file, "%s\n", "P6");
+            break;
+    }
     fprintf(file, "%d %d\n", image->width, image->height);
     fprintf(file, "255\n");
     fwrite(uchar_content, sizeof(unsigned char), image->width * image->height * image->channels, file);
@@ -194,9 +205,9 @@ bool save_image(Image *image, const char *name)
     return true;
 }
 
-void create_image(Image *image, char *type, int width, int height, int channels)
+void create_image(Image *image, IMAGE_TYPE type, int width, int height, int channels)
 {
-    image->type = strdup(type);
+    image->type = type;
     image->width = width;
     image->height = height;
     image->channels = channels;
@@ -205,8 +216,8 @@ void create_image(Image *image, char *type, int width, int height, int channels)
 
 void free_image(Image *image)
 {
-    free(image->type);
     free(image->content);
+    image = NULL;
 }
 
 bool image_to_png(Image *image, const char *png_file_path)
@@ -244,12 +255,16 @@ bool image_to_png(Image *image, const char *png_file_path)
 
     // set image info
     int color_type;
-    if (strcmp(image->type, "P2") == 0 || strcmp(image->type, "P5") == 0) {
+    switch (image->type) {
+    case GRAY:
         color_type = PNG_COLOR_TYPE_GRAY;
-    } else if (strcmp(image->type, "P3") == 0 || strcmp(image->type, "P6") == 0) {
+        break;
+    case RGB:
         color_type = PNG_COLOR_TYPE_RGB;
-    } else {
-        fprintf(stderr, "Image type '%s' not recognized.\n", image->type);
+        break;
+    default:
+        perror("Image type not recognized");
+        break;
     }
     png_set_IHDR(png_ptr, info_ptr, image->width, image->height, 8, 
                  color_type, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
@@ -279,7 +294,7 @@ bool image_to_png(Image *image, const char *png_file_path)
 
 void print_image(Image *image)
 {
-    printf("%s, %d, %d, %d\n", image->type, image->width, image->height, image->channels);
+    printf("%d, %d, %d, %d\n", image->type, image->width, image->height, image->channels);
     for (int col = 0; col<2; ++col) {
         for (int row = 0; row<2; ++row) {
             double * pixel = pixel_at(image, col, row);

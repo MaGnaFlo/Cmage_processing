@@ -1,8 +1,16 @@
 #include <stdbool.h>
 
+// image types
+typedef enum {
+    GRAY,
+    RGB,
+    HSV
+} IMAGE_TYPE;
+
 /// @brief Image structure
 typedef struct Image {
-    char *type;
+    // char *type;
+    IMAGE_TYPE type;
     unsigned int width;
     unsigned int height;
     unsigned int channels;
@@ -32,7 +40,7 @@ extern bool save_image(Image *image, const char *name);
 /// @param width 
 /// @param height 
 /// @param channels 
-extern void create_image(Image *image, char *type, int width, int height, int channels);
+extern void create_image(Image *image, IMAGE_TYPE type, int width, int height, int channels);
 
 /// @brief Frees image data
 /// @param image  

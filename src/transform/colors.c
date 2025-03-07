@@ -6,17 +6,12 @@
 
 bool rgb_to_gray(Image *dest, Image *src)
 {
-    char *type;
-    if (strcmp(src->type, "P6") == 0) {
-        type = "P5";
-    } else if (strcmp(src->type, "P3") == 0) {
-        type = "P2";
-    } else {
+    if (src->type != RGB) {
         perror("Error during RGB to gray conversion: original image is not a valid RGB image");
         return false;
     }
     
-    create_image(dest, type, src->width, src->height, 1);
+    create_image(dest, GRAY, src->width, src->height, 1);
     if (!dest->content) {
         perror("Error during image allocation.");
         return false;
@@ -33,17 +28,12 @@ bool rgb_to_gray(Image *dest, Image *src)
 
 bool gray_to_rgb(Image *dest, Image *src)
 {
-    char *type;
-    if (strcmp(src->type, "P5") == 0) {
-        type = "P6";
-    } else if (strcmp(src->type, "P2") == 0) {
-        type = "P3";
-    } else {
-        perror("Error during gray to RGB conversion: original image is not a valid gray (one channel) image");
+    if (src->type != GRAY) {
+        perror("Error during RGB to gray conversion: original image is not a valid RGB image");
         return false;
     }
     
-    create_image(dest, type, src->width, src->height, 3);
+    create_image(dest, RGB, src->width, src->height, 3);
     if (!dest->content) {
         perror("Error during image allocation.");
         return false;
@@ -97,7 +87,12 @@ static void rgb_to_hsv_pixel(double *dest, double *src)
 
 bool rgb_to_hsv(Image *dest, Image *src)
 {
-    create_image(dest, src->type, src->width, src->height, src->channels);
+    if (src->type != RGB) {
+        perror("Error during RGB to HSV conversion: original image is not a valid RGB image");
+        return false;
+    }
+
+    create_image(dest, HSV, src->width, src->height, src->channels);
     if (!dest->content) {
         perror("Error during image allocation.");
         return false;
@@ -146,7 +141,12 @@ static void hsv_to_rgb_pixel(double *dest, double *src)
 
 bool hsv_to_rgb(Image *dest, Image *src)
 {
-    create_image(dest, src->type, src->width, src->height, src->channels);
+    if (src->type != HSV) {
+        perror("Error during HSV to RGB conversion: original image is not a valid HSV image");
+        return false;
+    }
+
+    create_image(dest, RGB, src->width, src->height, src->channels);
     if (!dest->content) {
         perror("Error during image allocation.");
         return false;
