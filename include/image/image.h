@@ -43,3 +43,10 @@ extern void free_image(Image *image);
 /// @param png_file_path Resulting image file path
 /// @return true if conversion and save ok
 extern bool image_to_png(Image *image, const char *png_file_path);
+
+/// @brief Returns a pointer to the pixel at row and col
+/// @param image 
+/// @param row 
+/// @param col 
+/// @return Pointer to pixel, NULL if not found
+extern double * pixel_at(Image *image, int row, int col);

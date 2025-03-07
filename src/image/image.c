@@ -280,6 +280,24 @@ bool image_to_png(Image *image, const char *png_file_path)
 void print_image(Image *image)
 {
     printf("%s, %d, %d, %d\n", image->type, image->width, image->height, image->channels);
-    for (int i = 0; i<10; ++i) printf("%f ", image->content[i]);
+    for (int col = 0; col<2; ++col) {
+        for (int row = 0; row<2; ++row) {
+            double * pixel = pixel_at(image, col, row);
+            double r = *pixel, g = *(pixel+1), b = *(pixel+2);
+            printf("(%f %f %f) ", r, g, b);
+        }
+        printf("\n");
+    }
     printf("\n");
+}
+
+double * pixel_at(Image *image, int row, int col)
+{
+    if (row < 0 || row >= image->height || col < 0 || col >= image->width) {
+        printf("Fetching pixel out of bounds.");
+        return NULL;
+    }
+    double *pixel = image->content + col * image->height * image->channels
+                                   + row * image->channels;
+    return pixel;
 }
