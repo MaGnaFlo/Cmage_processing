@@ -166,3 +166,15 @@ bool hsv_to_rgb(Image *dest, Image *src)
     }
     return ok;
 }
+
+void shift_hue(Image *src, int shift)
+{
+    for (int col = 0; col<src->width; ++col) {
+        for (int row = 0; row<src->height; ++row) {
+            double *h = pixel_at(src, row, col);
+            *h = *h + shift;
+            if (*h < 0) *h += 360;
+            *h = fmod(*h, 360);
+        }
+    }
+}

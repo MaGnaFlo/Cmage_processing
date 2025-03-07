@@ -25,3 +25,8 @@ extern bool rgb_to_hsv(Image *dest, Image *src);
 /// @param src HSV image
 /// @return true if conversion ok
 extern bool hsv_to_rgb(Image *dest, Image *src);
+
+/// @brief Shifts the hue of a HSV image
+/// @param src HSV image
+/// @param shift hue shift
+extern void shift_hue(Image *src, int shift);
