@@ -276,16 +276,16 @@ bool image_to_png(Image *image, const char *png_file_path)
     for (size_t i = 0; i<image->width * image->height * image->channels; ++i) {
         uchar_content[i] = (unsigned char)(255 * image->content[i]);
     }
-    png_bytep row = (png_bytep)malloc(image->channels * image->width);
-    for (int j = 0; j<image->height; ++j) {
-        memcpy(row, uchar_content + j * image->width * image->channels, image->channels * image->width);
-        png_write_row(png_ptr, row);
+    png_bytep row_data = (png_bytep)malloc(image->channels * image->width);
+    for (int row = 0; row < image->height; ++row) {
+        memcpy(row_data, uchar_content + row * image->width * image->channels, image->channels * image->width);
+        png_write_row(png_ptr, row_data);
     }
     png_write_end(png_ptr, info_ptr);
 
     // clear
     free(uchar_content);
-    free(row);
+    free(row_data);
     png_destroy_write_struct(&png_ptr, &info_ptr);
     fclose(png);
 
@@ -306,13 +306,13 @@ void print_image(Image *image)
     printf("\n");
 }
 
-double * pixel_at(Image *image, int row, int col)
+double * pixel_at(Image *image, int col, int row)
 {
     if (row < 0 || row >= image->height || col < 0 || col >= image->width) {
         perror("Fetching pixel out of bounds");
         return NULL;
     }
-    double *pixel = image->content + col * image->height * image->channels
+    double *pixel = image->content + col * image->width * image->channels
                                    + row * image->channels;
     return pixel;
 }
