@@ -312,7 +312,7 @@ double * pixel_at(Image *image, int col, int row)
         perror("Fetching pixel out of bounds");
         return NULL;
     }
-    double *pixel = image->content + col * image->width * image->channels
+    double *pixel = image->content + col * image->height * image->channels
                                    + row * image->channels;
     return pixel;
 }
