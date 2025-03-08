@@ -17,10 +17,10 @@ bool rgb_to_gray(Image *dest, Image *src)
         return false;
     }
 
-    for (int i = 0; i<src->width; ++i) {
-        for (int j = 0; j<src->height; ++j) {
-            int pixel_pos = j*src->channels + i*src->channels*src->height;
-            dest->content[j+i*src->height] = (src->content[pixel_pos]+src->content[pixel_pos+1]+src->content[pixel_pos+2])/3.0;
+    for (int col = 0; col<src->width; ++col) {
+        for (int row = 0; row<src->height; ++row) {
+            int pixel_pos = row * src->channels + col * src->channels * src->height;
+            dest->content[row+col*src->height] = (src->content[pixel_pos] + src->content[pixel_pos+1] + src->content[pixel_pos+2])/3.0;
         }
     }
     return true;
@@ -39,10 +39,10 @@ bool gray_to_rgb(Image *dest, Image *src)
         return false;
     }
 
-    for (int i = 0; i<dest->width; ++i) {
-        for (int j = 0; j<dest->height; ++j) {
-            int pixel_pos = j*dest->channels + i*dest->channels*src->height;
-            double value = src->content[j+i*dest->height];
+    for (int col = 0; col<dest->width; ++col) {
+        for (int row = 0; row<dest->height; ++row) {
+            int pixel_pos = row*dest->channels + col*dest->channels*src->height;
+            double value = src->content[row+col*dest->height];
             dest->content[pixel_pos] = value;
             dest->content[pixel_pos+1] = value;
             dest->content[pixel_pos+2] = value;
