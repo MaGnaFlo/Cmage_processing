@@ -12,9 +12,9 @@
 /// @param row 
 static void nearest_neighbors_interpolation(double *pixel_dest, Image *src, int col, int row)
 {
-    col = (int)fmax(0, fmin(col, src->width-1));
-    row = (int)fmax(0, fmin(row, src->height-1));
-    memcpy(pixel_dest, pixel_at(src, col, row), src->channels * sizeof(double));
+    if (col >= 0 && col < src->width && row >= 0 && row < src->height) {
+        memcpy(pixel_dest, pixel_at(src, col, row), src->channels * sizeof(double));
+    }
 }
 
 /// @brief Bilinear interpolation of a pixel
@@ -29,11 +29,9 @@ static void bilinear_interpolation(double *pixel_dest, Image *src, double col, d
     int col1 = (int)ceil(col);
     int row0 = (int)floor(row);
     int row1 = (int)ceil(row);
-    // clamp
-    col0 = (int)fmax(0, fmin(col0, src->width-1));
-    col1 = (int)fmax(0, fmin(col1, src->width-1));
-    row0 = (int)fmax(0, fmin(row0, src->height-1));
-    row1 = (int)fmax(0, fmin(row1, src->height-1));
+    if (col0 < 0 || col1 >= src->width || row0 < 0 || row1 >= src->height) {
+        return;
+    }
     // deltas
     double dcol = col - col0;
     double drow = row - row0;
@@ -95,6 +93,42 @@ bool flip_vertical(Image *dest, Image *src)
                 double *pixel = pixel_at(dest, col, row);
                 double col_src = col*(double)src->width/width;
                 double row_src = row*(double)src->height/height;
+                switch (interp) {
+                    case INTERP_NEAREST: {
+                        nearest_neighbors_interpolation(pixel, src, (int)col_src, (int)row_src);
+                        break;
+                    }
+                    case INTERP_BILINEAR: {
+                        bilinear_interpolation(pixel, src, col_src, row_src);
+                        break;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+    bool rotate(Image *dest, Image *src, double angle, INTERP interp)
+    {
+        int width = (int)(src->width * cos(angle) + src->height * sin(angle));
+        int height = (int)(src->width * sin(angle) + src->height * cos(angle));
+        
+        create_image(dest, src->type, width, height, src->channels);
+        if (!dest->content) {
+            perror("Error during image allocation.");
+            return false;
+        }
+
+        double cx = (double)src->width / 2;
+        double cy = (double)src->height / 2;
+        double dest_cx = width / 2;
+        double dest_cy = height / 2;
+        
+        for (int col = 0; col < width; ++col) {
+            for (int row = 0; row < height; ++row) {
+                double *pixel = pixel_at(dest, col, row);
+                double col_src = (col-dest_cx)*cos(-angle) + (row-dest_cy)*sin(-angle) + cx;
+                double row_src = -(col-dest_cx)*sin(-angle) + (row-dest_cy)*cos(-angle) + cy;
                 switch (interp) {
                     case INTERP_NEAREST: {
                         nearest_neighbors_interpolation(pixel, src, (int)col_src, (int)row_src);

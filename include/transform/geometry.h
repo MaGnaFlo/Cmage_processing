@@ -10,20 +10,28 @@ typedef enum {
 /// @brief Flip the image horizontally
 /// @param dest Flipped image (uninitialized)
 /// @param src Original image
-/// @return bool if transform ok
+/// @return true if transform ok
 extern bool flip_horizontal(Image *dest, Image *src);
 
 /// @brief Flip the image vertically
 /// @param dest Flipped image (uninitialized)
 /// @param src Original image
-/// @return bool if transform ok
+/// @return true if transform ok
 extern bool flip_vertical(Image *dest, Image *src);
 
 /// @brief Resizes an image to the desired size
-/// @param dest 
-/// @param src 
-/// @param width 
-/// @param height 
-/// @param interp 
-/// @return 
+/// @param dest Resized image
+/// @param src Original image
+/// @param width Target width
+/// @param height Target height
+/// @param interp Interpolation technique
+/// @return true if resizing ok
 extern bool resize(Image *dest, Image *src, int width, int height, INTERP interp);
+
+/// @brief Rotate an image
+/// @param dest Rotated image
+/// @param src Original image
+/// @param angle Angle (radians)
+/// @param interp Interpolation technique
+/// @return true if rotation ok
+extern bool rotate(Image *dest, Image *src, double angle, INTERP interp);
