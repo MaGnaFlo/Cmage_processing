@@ -101,8 +101,8 @@ bool rgb_to_hsv(Image *dest, Image *src)
     bool ok = true;
     for (int col = 0; col<src->width; ++col) {
         for (int row = 0; row<src->height; ++row) {
-            double * src_pixel = pixel_at(src, row, col);
-            double * dest_pixel = pixel_at(dest, row, col);
+            double * src_pixel = pixel_at(src, col, row);
+            double * dest_pixel = pixel_at(dest, col, row);
             if (!src_pixel || !dest_pixel) {
                 ok = false;
                 continue;
@@ -155,8 +155,8 @@ bool hsv_to_rgb(Image *dest, Image *src)
     bool ok = true;
     for (int col = 0; col<src->width; ++col) {
         for (int row = 0; row<src->height; ++row) {
-            double * src_pixel = pixel_at(src, row, col);
-            double * dest_pixel = pixel_at(dest, row, col);
+            double *src_pixel = pixel_at(src, col, row);
+            double *dest_pixel = pixel_at(dest, col, row);
             if (!src_pixel || !dest_pixel) {
                 ok = false;
                 continue;
@@ -171,7 +171,7 @@ void shift_hue(Image *src, int shift)
 {
     for (int col = 0; col<src->width; ++col) {
         for (int row = 0; row<src->height; ++row) {
-            double *h = pixel_at(src, row, col);
+            double *h = pixel_at(src, col, row);
             *h = *h + shift;
             if (*h < 0) *h += 360;
             *h = fmod(*h, 360);

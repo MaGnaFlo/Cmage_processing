@@ -309,11 +309,11 @@ void print_image(Image *image)
 double * pixel_at(Image *image, int col, int row)
 {
     if (row < 0 || row >= image->height || col < 0 || col >= image->width) {
-        perror("Fetching pixel out of bounds");
+        fprintf(stderr, "Fetching pixel out of bounds: %d %d (for width %d and height %d)\n", col, row, image->width, image->height);
         return NULL;
     }
-    double *pixel = image->content + col * image->height * image->channels
-                                   + row * image->channels;
+    double *pixel = image->content + row * image->width * image->channels
+                                   + col * image->channels;
     return pixel;
 }
 
