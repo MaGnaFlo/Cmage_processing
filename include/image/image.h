@@ -58,3 +58,9 @@ extern bool image_to_png(Image *image, const char *png_file_path);
 /// @param col 
 /// @return Pointer to pixel, NULL if not found
 extern double * pixel_at(Image *image, int row, int col);
+
+/// @brief Does what you think it does
+/// @param dest Copy image (uninitialized)
+/// @param src Origina image
+/// @return true if copy ok
+extern bool copy_image(Image *dest, Image *src);

@@ -309,10 +309,25 @@ void print_image(Image *image)
 double * pixel_at(Image *image, int row, int col)
 {
     if (row < 0 || row >= image->height || col < 0 || col >= image->width) {
-        printf("Fetching pixel out of bounds.");
+        perror("Fetching pixel out of bounds");
         return NULL;
     }
     double *pixel = image->content + col * image->height * image->channels
                                    + row * image->channels;
     return pixel;
+}
+
+bool copy_image(Image *dest, Image *src)
+{
+    create_image(dest, src->type, src->width, src->height, src->channels);
+    if (!dest->content) {
+        perror("Error during image allocation");
+        return false;
+    }
+    size_t size = src->width * src->height * src->channels * sizeof(double);
+    if (!memcpy(dest->content, src->content, size)) {
+        perror("Error copying image content");
+        return false;
+    }
+    return true;
 }
