@@ -10,6 +10,7 @@
 #include "server/server.h"
 #include "image/image.h"
 #include "transform/colors.h"
+#include "transform/geometry.h"
 
 // paths
 static const char * const IMAGES_PATH = "../images/";
@@ -32,8 +33,11 @@ typedef struct Transform {
     void * value;
 } Transform;
 // array of transforms
-static Transform transforms[1] = {
-    {.key = "rgb2gray", .value = &rgb_to_gray}
+static Transform transforms[4] = {
+    {.key = "rgb2gray", .value = &rgb_to_gray},
+    {.key = "gray2rgb", .value = &gray_to_rgb},
+    {.key = "flip_hor", .value = &flip_horizontal},
+    {.key = "flip_ver", .value = &flip_vertical}
 };
 
 /// @brief Retrieves the transform given its key
