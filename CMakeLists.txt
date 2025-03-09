@@ -5,7 +5,8 @@ project(cmage_processing C)
 file(GLOB SOURCES "src/main.c"
                   "src/image/*.c"
                   "src/server/*.c"
-                  "src/transform/*.c")
+                  "src/transform/*.c",
+                  "src/utils/*.c")
 
 include_directories("include")
 
