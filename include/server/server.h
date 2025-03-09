@@ -1,3 +1,4 @@
+#pragma once
 
 struct MHD_Connection;
 

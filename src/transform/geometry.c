@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include "utils/matrix.h"
 
 /// @brief Nearest neighbors interpolation of a pixel
 /// @param pixel_dest Pixel to interpolate
@@ -80,66 +81,104 @@ bool flip_vertical(Image *dest, Image *src)
         return true;
     }
     
-    bool resize(Image *dest, Image *src, int width, int height, INTERP interp)
-    {
-        create_image(dest, src->type, width, height, src->channels);
-        if (!dest->content) {
-            perror("Error during image allocation.");
-            return false;
-        }
+bool resize(Image *dest, Image *src, int width, int height, INTERP interp)
+{
+    create_image(dest, src->type, width, height, src->channels);
+    if (!dest->content) {
+        perror("Error during image allocation.");
+        return false;
+    }
         
-        for (int col = 0; col < width; ++col) {
-            for (int row = 0; row < height; ++row) {
-                double *pixel = pixel_at(dest, col, row);
-                double col_src = col*(double)src->width/width;
-                double row_src = row*(double)src->height/height;
-                switch (interp) {
-                    case INTERP_NEAREST: {
-                        nearest_neighbors_interpolation(pixel, src, (int)col_src, (int)row_src);
-                        break;
-                    }
-                    case INTERP_BILINEAR: {
-                        bilinear_interpolation(pixel, src, col_src, row_src);
-                        break;
-                    }
+    for (int col = 0; col < width; ++col) {
+        for (int row = 0; row < height; ++row) {
+            double *pixel = pixel_at(dest, col, row);
+            double col_src = col*(double)src->width/width;
+               double row_src = row*(double)src->height/height;
+            switch (interp) {
+                case INTERP_NEAREST: {
+                    nearest_neighbors_interpolation(pixel, src, (int)col_src, (int)row_src);
+                    break;
+                }
+                case INTERP_BILINEAR: {
+                    bilinear_interpolation(pixel, src, col_src, row_src);
+                    break;
                 }
             }
         }
-        return true;
+    }
+    return true;
+}
+
+bool rotate(Image *dest, Image *src, double angle, INTERP interp)
+{
+    int width = (int)(src->width * cos(angle) + src->height * sin(angle));
+    int height = (int)(src->width * sin(angle) + src->height * cos(angle));
+        
+    create_image(dest, src->type, width, height, src->channels);
+    if (!dest->content) {
+        perror("Error during image allocation.");
+        return false;
     }
 
-    bool rotate(Image *dest, Image *src, double angle, INTERP interp)
-    {
-        int width = (int)(src->width * cos(angle) + src->height * sin(angle));
-        int height = (int)(src->width * sin(angle) + src->height * cos(angle));
+    double cx = (double)src->width / 2;
+    double cy = (double)src->height / 2;
+    double dest_cx = width / 2;
+    double dest_cy = height / 2;
         
-        create_image(dest, src->type, width, height, src->channels);
-        if (!dest->content) {
-            perror("Error during image allocation.");
-            return false;
-        }
-
-        double cx = (double)src->width / 2;
-        double cy = (double)src->height / 2;
-        double dest_cx = width / 2;
-        double dest_cy = height / 2;
-        
-        for (int col = 0; col < width; ++col) {
-            for (int row = 0; row < height; ++row) {
-                double *pixel = pixel_at(dest, col, row);
-                double col_src = (col-dest_cx)*cos(-angle) + (row-dest_cy)*sin(-angle) + cx;
-                double row_src = -(col-dest_cx)*sin(-angle) + (row-dest_cy)*cos(-angle) + cy;
-                switch (interp) {
-                    case INTERP_NEAREST: {
-                        nearest_neighbors_interpolation(pixel, src, (int)col_src, (int)row_src);
-                        break;
-                    }
-                    case INTERP_BILINEAR: {
-                        bilinear_interpolation(pixel, src, col_src, row_src);
-                        break;
-                    }
+    for (int col = 0; col < width; ++col) {
+        for (int row = 0; row < height; ++row) {
+            double *pixel = pixel_at(dest, col, row);
+            double col_src = (col-dest_cx)*cos(-angle) + (row-dest_cy)*sin(-angle) + cx;
+            double row_src = -(col-dest_cx)*sin(-angle) + (row-dest_cy)*cos(-angle) + cy;
+            switch (interp) {
+                case INTERP_NEAREST: {
+                    nearest_neighbors_interpolation(pixel, src, (int)col_src, (int)row_src);
+                    break;
+                }
+                case INTERP_BILINEAR: {
+                    bilinear_interpolation(pixel, src, col_src, row_src);
+                    break;
                 }
             }
         }
-        return true;
     }
+    return true;
+}
+
+bool warp_affine(Image *dest, Image *src, Matrix warp_matrix, INTERP interp)
+{
+    int width = src->width;
+    int height = src->height;
+        
+    create_image(dest, src->type, width, height, src->channels);
+    if (!dest->content) {
+        perror("Error during image allocation.");
+        return false;
+    }
+
+    // double cx = (double)src->width / 2;
+    // double cy = (double)src->height / 2;
+    // double dest_cx = width / 2;
+    // double dest_cy = height / 2;
+
+
+        
+    for (int col = 0; col < width; ++col) {
+        for (int row = 0; row < height; ++row) {
+            double *pixel = pixel_at(dest, col, row);
+            double col_src = 0;//(col-dest_cx)*cos(-angle) + (row-dest_cy)*sin(-angle) + cx;
+            double row_src = 0;//-(col-dest_cx)*sin(-angle) + (row-dest_cy)*cos(-angle) + cy;
+            switch (interp) {
+                case INTERP_NEAREST: {
+                    nearest_neighbors_interpolation(pixel, src, (int)col_src, (int)row_src);
+                    break;
+                }
+                case INTERP_BILINEAR: {
+                    bilinear_interpolation(pixel, src, col_src, row_src);
+                    break;
+                }
+            }
+        }
+    }
+    return true;
+}

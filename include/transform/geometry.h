@@ -1,6 +1,8 @@
+#pragma once
 #include <stdbool.h>
 
 typedef struct Image Image;
+typedef struct Matrix Matrix;
 
 typedef enum {
     INTERP_NEAREST,
@@ -35,3 +37,5 @@ extern bool resize(Image *dest, Image *src, int width, int height, INTERP interp
 /// @param interp Interpolation technique
 /// @return true if rotation ok
 extern bool rotate(Image *dest, Image *src, double angle, INTERP interp);
+
+extern bool warp_affine(Image *dest, Image *src, Matrix warp_matrix, INTERP interp);
