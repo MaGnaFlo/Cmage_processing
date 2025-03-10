@@ -38,6 +38,22 @@ extern bool resize(Image *dest, Image *src, int width, int height, INTERP interp
 /// @return true if rotation ok
 extern bool rotate(Image *dest, Image *src, double angle, INTERP interp);
 
+/// @brief Creates an affine matrix
+/// @param sx Scale x
+/// @param sy Scale y
+/// @param angle Rotation angle
+/// @param cx Rotation center x
+/// @param cy Rotation center y
+/// @param shx Shear x
+/// @param shy Shear y
+/// @param tx Translation x
+/// @param ty Translation y
+/// @return Affine matrix
+extern Matrix create_affine_matrix(double sx, double sy, 
+                                          double angle, double cx, double cy,
+                                          double shx, double shy, 
+                                          double tx, double ty);
+
 /// @brief Warps the image according to an affine transformation
 /// @param dest Warped image
 /// @param src Original image
@@ -45,3 +61,5 @@ extern bool rotate(Image *dest, Image *src, double angle, INTERP interp);
 /// @param interp Interpolation
 /// @return true if warp ok
 extern bool warp_affine(Image *dest, Image *src, Matrix *warp_matrix, INTERP interp);
+
+

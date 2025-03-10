@@ -109,79 +109,91 @@ bool flip_vertical(Image *dest, Image *src)
         return true;
     }
     
-    bool rotate(Image *dest, Image *src, double angle, INTERP interp)
-    {
-        int width = (int)(src->width * cos(angle) + src->height * sin(angle));
-        int height = (int)(src->width * sin(angle) + src->height * cos(angle));
+bool rotate(Image *dest, Image *src, double angle, INTERP interp)
+{
+    int width = (int)(src->width * cos(angle) + src->height * sin(angle));
+    int height = (int)(src->width * sin(angle) + src->height * cos(angle));
         
-        create_image(dest, src->type, width, height, src->channels);
-        if (!dest->content) {
-            perror("Error during image allocation.");
-            return false;
-        }
+    create_image(dest, src->type, width, height, src->channels);
+    if (!dest->content) {
+        perror("Error during image allocation.");
+         return false;
+    }
         
-        double cx = (double)src->width / 2;
-        double cy = (double)src->height / 2;
-        double dest_cx = width / 2;
-        double dest_cy = height / 2;
+    double cx = (double)src->width / 2;
+    double cy = (double)src->height / 2;
+    double dest_cx = width / 2;
+    double dest_cy = height / 2;
         
-        for (int col = 0; col < width; ++col) {
-            for (int row = 0; row < height; ++row) {
-                double *pixel = pixel_at(dest, col, row);
-                double col_src = (col-dest_cx)*cos(-angle) + (row-dest_cy)*sin(-angle) + cx;
-                double row_src = -(col-dest_cx)*sin(-angle) + (row-dest_cy)*cos(-angle) + cy;
-                switch (interp) {
-                    case INTERP_NEAREST: {
-                        nearest_neighbors_interpolation(pixel, src, (int)col_src, (int)row_src);
-                        break;
-                    }
-                    case INTERP_BILINEAR: {
-                        bilinear_interpolation(pixel, src, col_src, row_src);
-                        break;
-                    }
+    for (int col = 0; col < width; ++col) {
+        for (int row = 0; row < height; ++row) {
+            double *pixel = pixel_at(dest, col, row);
+            double col_src = (col-dest_cx)*cos(-angle) + (row-dest_cy)*sin(-angle) + cx;
+            double row_src = -(col-dest_cx)*sin(-angle) + (row-dest_cy)*cos(-angle) + cy;
+            switch (interp) {
+                case INTERP_NEAREST: {
+                    nearest_neighbors_interpolation(pixel, src, (int)col_src, (int)row_src);
+                    break;
+                }
+                case INTERP_BILINEAR: {
+                    bilinear_interpolation(pixel, src, col_src, row_src);
+                    break;
                 }
             }
         }
-        return true;
     }
+    return true;
+}
     
-    bool warp_affine(Image *dest, Image *src, Matrix *warp_matrix, INTERP interp)
-    {
-        if (warp_matrix->width != warp_matrix->height) {
-            fprintf("Affine matrix is not a square matrix: (%dx%d)\n", warp_matrix->height, warp_matrix->width);
-            return false;
-        }
+Matrix create_affine_matrix(double sx, double sy, 
+    double angle, double cx, double cy,
+    double shx, double shy, 
+    double tx, double ty)
+{
+    return create_matrix(3, 3, (double[3][3]){
+            {sx*cos(angle) + shx*sin(angle),     shy*cos(angle) + sin(angle),       cx*(1-cos(angle))-cx*sin(angle) + ty},
+            {-sin(angle) + shx*cos(angle),       shy*sin(angle) + sy*cos(angle),    cy*(1-cos(angle))+cy*sin(angle) + tx},
+            {0,                                  0,                                 1}
+    });
+}
 
-        int width = src->width;
-        int height = src->height;
+bool warp_affine(Image *dest, Image *src, Matrix *warp_matrix, INTERP interp)
+{
+    if (warp_matrix->width != warp_matrix->height) {
+        fprintf(stderr, "Affine matrix is not a square matrix: (%dx%d)\n", warp_matrix->height, warp_matrix->width);
+        return false;
+    }
         
-        create_image(dest, src->type, width, height, src->channels);
-        if (!dest->content) {
-            perror("Error during image allocation.");
-            return false;
-        }
-
-        Matrix inv_warp_matrix = inverse(warp_matrix);
-        for (int col = 0; col < width; ++col) {
-            for (int row = 0; row < height; ++row) {
-                double *pixel = pixel_at(dest, col, row);
-                Matrix pos = create_matrix(3, 1, (double[3][1]){{(double)row}, 
-                                                                {(double)col}, 
-                                                                {1.0}});
-                Matrix new_pos = matmul(&inv_warp_matrix, &pos);
-                double row_src = matrix_at(&new_pos, 0, 0);
-                double col_src = matrix_at(&new_pos, 1, 0);
-                switch (interp) {
-                    case INTERP_NEAREST: {
-                        nearest_neighbors_interpolation(pixel, src, (int)col_src, (int)row_src);
-                        break;
-                    }
-                    case INTERP_BILINEAR: {
-                        bilinear_interpolation(pixel, src, col_src, row_src);
-                        break;
-                    }
+    int width = src->width;
+    int height = src->height;
+        
+    create_image(dest, src->type, width, height, src->channels);
+    if (!dest->content) {
+        perror("Error during image allocation.");
+        return false;
+    }
+        
+    Matrix inv_warp_matrix = inverse(warp_matrix);
+    for (int col = 0; col < width; ++col) {
+        for (int row = 0; row < height; ++row) {
+            double *pixel = pixel_at(dest, col, row);
+            Matrix pos = create_matrix(3, 1, (double[3][1]){{(double)row}, 
+            {(double)col}, 
+            {1.0}});
+            Matrix new_pos = matmul(&inv_warp_matrix, &pos);
+            double row_src = matrix_at(&new_pos, 0, 0);
+            double col_src = matrix_at(&new_pos, 1, 0);
+            switch (interp) {
+                case INTERP_NEAREST: {
+                    nearest_neighbors_interpolation(pixel, src, (int)col_src, (int)row_src);
+                    break;
+                }
+                case INTERP_BILINEAR: {
+                    bilinear_interpolation(pixel, src, col_src, row_src);
+                    break;
                 }
             }
         }
-        return true;
     }
+    return true;
+}
