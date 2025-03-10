@@ -38,4 +38,10 @@ extern bool resize(Image *dest, Image *src, int width, int height, INTERP interp
 /// @return true if rotation ok
 extern bool rotate(Image *dest, Image *src, double angle, INTERP interp);
 
-extern bool warp_affine(Image *dest, Image *src, Matrix warp_matrix, INTERP interp);
+/// @brief Warps the image according to an affine transformation
+/// @param dest Warped image
+/// @param src Original image
+/// @param warp_matrix Affine transform matrix
+/// @param interp Interpolation
+/// @return true if warp ok
+extern bool warp_affine(Image *dest, Image *src, Matrix *warp_matrix, INTERP interp);

@@ -3,8 +3,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <assert.h>
 
-Matrix zero_matrix(unsigned int width, unsigned int height)
+Matrix zero_matrix(unsigned int height, unsigned int width)
 {
     Matrix mat;
     mat.width = width;
@@ -13,19 +14,21 @@ Matrix zero_matrix(unsigned int width, unsigned int height)
     return mat;
 }
 
-Matrix create_matrix(unsigned int width, unsigned int height, double data[width][height])
+Matrix create_matrix(unsigned int height, unsigned int width, double data[height][width])
 {
-    Matrix mat = zero_matrix(width, height);
-    for (int j = 0; j < height; ++j) {
-        memcpy(mat.data + j * width, data[j], width * sizeof(double));
+    Matrix mat = zero_matrix(height, width);
+    for (int i = 0; i < height; ++i) {
+        for (int j = 0; j < width; ++j) {
+            set_matrix_at(&mat, i, j, data[i][j]);
+        }
     }
     return mat;
 }
 
 double matrix_at(Matrix *mat, unsigned int i, unsigned int j)
 {
-    if (i >= mat->width || j >= mat->height) {
-        fprintf(stderr, "Accessing matrix value of out bounds (%d %d for size %dx%d)", i, j, mat->width, mat->height);
+    if (i >= mat->height || j >= mat->width) {
+        fprintf(stderr, "Accessing matrix value of out bounds (%d %d for size %dx%d)\n", i, j, mat->height, mat->width);
         return 0;
     }
     return *(mat->data + i * mat->width + j);
@@ -33,8 +36,8 @@ double matrix_at(Matrix *mat, unsigned int i, unsigned int j)
 
 void set_matrix_at(Matrix *mat, unsigned int i, unsigned int j, double val)
 {
-    if (i >= mat->width || j >= mat->height) {
-        fprintf(stderr, "Accessing matrix value of out bounds (%d %d for size %dx%d)", i, j, mat->width, mat->height);
+    if (i >= mat->height || j >= mat->width) {
+        fprintf(stderr, "Setting matrix value of out bounds (%d %d for size %dx%d)\n", i, j, mat->height, mat->width);
     }
     *(mat->data + i * mat->width + j) = val;
 }
@@ -43,7 +46,7 @@ Matrix matmul(Matrix *A, Matrix *B)
 {
     Matrix res;
     if (A->width != B->height) {
-        perror("Matrix sizes not suitable for multiplication");
+        fprintf(stderr, "Matrix sizes not suitable for multiplication w_A = %d and h_B = %d\n", A->width, B->height);
         return res;
     }
     res.width = B->width;
@@ -64,7 +67,7 @@ Matrix matmul(Matrix *A, Matrix *B)
 
 Matrix submatrix(Matrix *mat, unsigned int i_ex, unsigned int j_ex)
 {
-    Matrix submat = zero_matrix(mat->width-1, mat->height-1);
+    Matrix submat = zero_matrix(mat->height-1, mat->width-1);
     unsigned int i_sub = 0;
     for (int i = 0; i < mat->width; ++i) {
         unsigned int j_sub = 0;
@@ -81,6 +84,8 @@ Matrix submatrix(Matrix *mat, unsigned int i_ex, unsigned int j_ex)
 
 double determinant(Matrix *mat)
 {
+    assert(mat->width == mat->height);
+
     double det_value = 0;
     if (mat->width == 2) {
         det_value = matrix_at(mat, 0, 0) * matrix_at(mat, 1, 1) - matrix_at(mat, 0, 1) * matrix_at(mat, 1, 0);
@@ -107,9 +112,9 @@ Matrix comatrix(Matrix *mat)
 
 Matrix transpose(Matrix *mat)
 {
-    Matrix t_mat = zero_matrix(mat->width, mat->height);
-    for (int i = 0; i < mat->width; ++i) {
-        for (int j = 0; j < mat->height; ++j) {
+    Matrix t_mat = zero_matrix(mat->height, mat->width);
+    for (int i = 0; i < mat->height; ++i) {
+        for (int j = 0; j < mat->width; ++j) {
             set_matrix_at(&t_mat, i, j, matrix_at(mat, j, i));
         }
     }
@@ -118,6 +123,8 @@ Matrix transpose(Matrix *mat)
 
 Matrix inverse(Matrix *mat)
 {
+    assert(mat->width == mat->height);
+
     Matrix inverse;
     double det = determinant(mat);
     if (det == 0) {
@@ -130,8 +137,8 @@ Matrix inverse(Matrix *mat)
     inverse = zero_matrix(mat->width, mat->height);
     Matrix comat = comatrix(mat);
     Matrix t_comat = transpose(&comat);
-    for (int i = 0; i < inverse.width; ++i) {
-        for (int j = 0; j < inverse.height; ++j) {
+    for (int i = 0; i < inverse.height; ++i) {
+        for (int j = 0; j < inverse.width; ++j) {
             set_matrix_at(&inverse, i, j, matrix_at(&t_comat, i, j) / det);
         }
     }
@@ -140,9 +147,9 @@ Matrix inverse(Matrix *mat)
 
 void print_matrix(Matrix *mat)
 {
-    printf("Size: (%d,%d)\n", mat->width, mat->height);
-    for (int i = 0; i<mat->width; i++) {
-        for (int j = 0; j<mat->height; j++)
+    printf("Size: (%d,%d)\n", mat->height, mat->width);
+    for (int i = 0; i<mat->height; i++) {
+        for (int j = 0; j<mat->width; j++)
         printf("%f ", matrix_at(mat, i, j));
         printf("\n");
     }

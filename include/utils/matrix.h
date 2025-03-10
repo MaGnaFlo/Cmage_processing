@@ -7,14 +7,14 @@ typedef struct Matrix {
     double *data;
 } Matrix;
 
-extern Matrix zero_matrix(unsigned int width, unsigned int height);
+extern Matrix zero_matrix(unsigned int height, unsigned int width);
 
 /// @brief Creates a matrix given its width, height and data array
 /// @param width Matrix width
 /// @param height Matrix height
 /// @param data Array of lines
 /// @return Created matrix
-extern Matrix create_matrix(unsigned int width, unsigned int height, double data[width][height]);
+extern Matrix create_matrix(unsigned int height, unsigned int width, double data[height][width]);
 
 /// @brief Returns value of mat at (i,j)
 /// @param mat Matrix
