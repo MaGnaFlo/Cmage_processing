@@ -50,9 +50,9 @@ extern bool rotate(Image *dest, Image *src, double angle, INTERP interp);
 /// @param ty Translation y
 /// @return Affine matrix
 extern Matrix create_affine_matrix(double sx, double sy, 
-                                          double angle, double cx, double cy,
-                                          double shx, double shy, 
-                                          double tx, double ty);
+                                   double angle, double cx, double cy,
+                                   double shx, double shy, 
+                                   double tx, double ty);
 
 /// @brief Warps the image according to an affine transformation
 /// @param dest Warped image

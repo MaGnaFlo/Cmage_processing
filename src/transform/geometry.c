@@ -146,9 +146,9 @@ bool rotate(Image *dest, Image *src, double angle, INTERP interp)
 }
     
 Matrix create_affine_matrix(double sx, double sy, 
-    double angle, double cx, double cy,
-    double shx, double shy, 
-    double tx, double ty)
+                            double angle, double cx, double cy,
+                            double shx, double shy, 
+                            double tx, double ty)
 {
     return create_matrix(3, 3, (double[3][3]){
             {sx*cos(angle) + shx*sin(angle),     shy*cos(angle) + sin(angle),       cx*(1-cos(angle))-cx*sin(angle) + ty},
@@ -157,16 +157,57 @@ Matrix create_affine_matrix(double sx, double sy,
     });
 }
 
+/// @brief Warps the corners of an image according to an affine matrix
+/// @param img Image
+/// @param warp_matrix Affine matrix
+/// @param min_x Resulting minimum x coordinate after warping
+/// @param min_y Resulting minimum y coordinate after warping
+/// @param max_x Resulting maximum x coordinate after warping
+/// @param max_y Resulting maximum y coordinate after warping
+static void warp_corners(Image *img, Matrix *warp_matrix, 
+                         double *min_x, double *min_y, 
+                         double *max_x, double *max_y)
+{
+    Matrix top_left = create_matrix(3, 1, (double[3][1]){{0.0}, {0.0}, {1.0}});
+    Matrix top_right = create_matrix(3, 1, (double[3][1]){{0.0}, {(double)img->width}, {1.0}});
+    Matrix bottom_left = create_matrix(3, 1, (double[3][1]){{(double)img->height}, {0.0}, {1.0}});
+    Matrix bottom_right = create_matrix(3, 1, (double[3][1]){{(double)img->height}, {(double)img->width}, {1.0}});
+
+    Matrix new_top_left = matmul(warp_matrix, &top_left);
+    Matrix new_top_right = matmul(warp_matrix, &top_right);
+    Matrix new_bottom_left = matmul(warp_matrix, &bottom_left);
+    Matrix new_bottom_right = matmul(warp_matrix, &bottom_right);
+
+    *min_x = fmin(matrix_at(&new_top_left, 1, 0), 
+                        fmin(matrix_at(&new_top_right, 1, 0), 
+                             fmin(matrix_at(&new_bottom_left, 1, 0), 
+                                  matrix_at(&new_bottom_right, 1, 0))));
+    *max_x = fmax(matrix_at(&new_top_left, 1, 0), 
+                        fmax(matrix_at(&new_top_right, 1, 0), 
+                             fmax(matrix_at(&new_bottom_left, 1, 0), 
+                                  matrix_at(&new_bottom_right, 1, 0))));
+    *min_y = fmin(matrix_at(&new_top_left, 0, 0), 
+                        fmin(matrix_at(&new_top_right, 0, 0), 
+                             fmin(matrix_at(&new_bottom_left, 0, 0), 
+                                  matrix_at(&new_bottom_right, 0, 0))));
+    *max_y = fmax(matrix_at(&new_top_left, 0, 0), 
+                        fmax(matrix_at(&new_top_right, 0, 0), 
+                             fmax(matrix_at(&new_bottom_left, 0, 0), 
+                                  matrix_at(&new_bottom_right, 0, 0))));
+}
+
 bool warp_affine(Image *dest, Image *src, Matrix *warp_matrix, INTERP interp)
 {
     if (warp_matrix->width != warp_matrix->height) {
         fprintf(stderr, "Affine matrix is not a square matrix: (%dx%d)\n", warp_matrix->height, warp_matrix->width);
         return false;
     }
-        
-    int width = src->width;
-    int height = src->height;
-        
+
+    // get min and max values for size and displacement
+    double min_x, min_y, max_x, max_y;
+    warp_corners(src, warp_matrix, &min_x, &min_y, &max_x, &max_y); 
+    int width = (int)ceil(max_x - min_x);
+    int height = (int)ceil(max_y - min_y);
     create_image(dest, src->type, width, height, src->channels);
     if (!dest->content) {
         perror("Error during image allocation.");
@@ -177,12 +218,14 @@ bool warp_affine(Image *dest, Image *src, Matrix *warp_matrix, INTERP interp)
     for (int col = 0; col < width; ++col) {
         for (int row = 0; row < height; ++row) {
             double *pixel = pixel_at(dest, col, row);
-            Matrix pos = create_matrix(3, 1, (double[3][1]){{(double)row}, 
-            {(double)col}, 
-            {1.0}});
+            Matrix pos = create_matrix(3, 1, (double[3][1]){
+                {row + min_y},
+                {col + min_x},
+                {1.0}});
             Matrix new_pos = matmul(&inv_warp_matrix, &pos);
             double row_src = matrix_at(&new_pos, 0, 0);
             double col_src = matrix_at(&new_pos, 1, 0);
+
             switch (interp) {
                 case INTERP_NEAREST: {
                     nearest_neighbors_interpolation(pixel, src, (int)col_src, (int)row_src);
@@ -193,7 +236,10 @@ bool warp_affine(Image *dest, Image *src, Matrix *warp_matrix, INTERP interp)
                     break;
                 }
             }
+            free_matrix(&pos);
+            free_matrix(&new_pos);
         }
     }
+    free_matrix(&inv_warp_matrix);
     return true;
 }

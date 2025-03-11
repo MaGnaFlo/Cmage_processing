@@ -25,6 +25,15 @@ Matrix create_matrix(unsigned int height, unsigned int width, double data[height
     return mat;
 }
 
+void free_matrix(Matrix *matrix)
+{
+    if (matrix) {
+        free(matrix->data);
+        matrix->height = 0;
+        matrix->width = 0;
+    }
+}
+
 double matrix_at(Matrix *mat, unsigned int i, unsigned int j)
 {
     if (i >= mat->height || j >= mat->width) {

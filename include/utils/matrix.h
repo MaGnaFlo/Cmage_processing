@@ -16,6 +16,10 @@ extern Matrix zero_matrix(unsigned int height, unsigned int width);
 /// @return Created matrix
 extern Matrix create_matrix(unsigned int height, unsigned int width, double data[height][width]);
 
+/// @brief Frees matrix memory
+/// @param matrix 
+extern void free_matrix(Matrix *matrix);
+
 /// @brief Returns value of mat at (i,j)
 /// @param mat Matrix
 /// @param i Row
