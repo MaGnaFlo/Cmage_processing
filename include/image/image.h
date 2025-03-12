@@ -65,3 +65,24 @@ extern double * pixel_at(Image *image, int col, int row);
 /// @param src Origina image
 /// @return true if copy ok
 extern bool copy_image(Image *dest, Image *src);
+
+/// @brief Adds images pixel-wise
+/// @param dest Result
+/// @param I Source image 1
+/// @param J Source image 2
+/// @return true if add ok
+extern bool add_images(Image *dest, Image *I, Image *J);
+
+/// @brief Multiplies images pixel-wise
+/// @param dest Result
+/// @param I Source image 1
+/// @param J Source image 2
+/// @return true if add ok
+extern bool multiply_images(Image *dest, Image *I, Image *J);
+
+/// @brief Applies a function to each pixel of the image
+/// @param dest Resulting image
+/// @param src Original image
+/// @param fct Pointer to function
+/// @return true if operation ok
+extern bool func_image(Image *dest, Image *src, void *fct);
