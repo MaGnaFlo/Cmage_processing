@@ -49,7 +49,6 @@ static Matrix create_gaussian_kernel(unsigned int kernel_size, double sigma)
 {
     Matrix kernel = zero_matrix(kernel_size, kernel_size);
     double ux = (double)kernel_size/2, uy = (double)kernel_size/2;
-    printf("%f %f %f\n", sigma, ux, uy);
     for (int i = 0; i < kernel_size; ++i) {
         for (int j = 0; j < kernel_size; ++j) {
             int x = i - kernel_size/2;
@@ -81,7 +80,7 @@ bool sobel_filter(Image *grad_mag, Image *grad_angle, Image *src)
         {-1, -2, -1}
     });
 
-    Image Ix, Iy, Ix_sq, Iy_sq, dI_sq;
+    Image Ix, Iy, Ix_sq, Iy_sq, dI_sq, I_div;
     bool rc = true;
     rc = filter(&Ix, src, &sobel_x) && rc;
     rc = filter(&Iy, src, &sobel_y) && rc;
@@ -89,8 +88,10 @@ bool sobel_filter(Image *grad_mag, Image *grad_angle, Image *src)
     rc = multiply_images(&Iy_sq, &Iy, &Iy) && rc;
     rc = add_images(&dI_sq, &Ix_sq, &Iy_sq) && rc;
     rc = func_image(grad_mag, &dI_sq, &sqrt);
-    
 
+    rc = divide_images(&I_div, &Iy, &Ix);
+    rc = func_image(grad_angle, &I_div, &atan);
+    
     // free
     free_image(&Ix);
     free_image(&Iy);

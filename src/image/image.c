@@ -376,6 +376,32 @@ bool multiply_images(Image *dest, Image *I, Image *J)
     return true;
 }
 
+bool divide_images(Image *dest, Image *I, Image *J)
+{
+    if (I->width != J->width || I->height != J->height || I->channels != J->channels) {
+        fprintf(stderr, "Cannot divide images of different sizes (%dx%dx%d and %dx%dx%d)", 
+                I->width, I->height, I->channels, J->width, J->height, J->channels);
+        return false;
+    }
+    create_image(dest, I->type, I->width, I->height, I->channels);
+    if (!dest->content) {
+        perror("Error during image allocation");
+        return false;
+    }
+    for (int i = 0; i < I->height; ++i) {
+        for (int j = 0; j < I->width; ++j) {
+            for (int c = 0; c < I->channels; ++c) {
+                if (*(pixel_at(J, j, i)+c) == 0.0) {
+                    *(pixel_at(dest, j, i)+c) = 0;
+                } else {
+                    *(pixel_at(dest, j, i)+c) = *(pixel_at(I, j, i)+c) / *(pixel_at(J, j, i)+c);
+                }
+            }
+        }
+    }
+    return true;
+}
+
 bool func_image(Image *dest, Image *src, void *fct)
 {
     typedef double (*F)(double);

@@ -17,7 +17,6 @@
             font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
         }
     </style>
-    <script src="scripts.js"></script>
     <body>
         <header class="header">
             <h1>CMage Processing</h1>
@@ -31,9 +30,13 @@
                     <option value="rgb2gray">RGB to gray</option>
                     <option value="flip_hor">Flip horizontal</option>
                     <option value="flip_ver">Flip vertical</option>
+                    <option value="rotate">Rotate</option>
+                    <option value="edges">Sobel edge detection</option>
+                    <option value="blur">Gaussian blur</option>
                 </select>
                 <button id="transform" onclick="transform()">Go!</button>
             </p>
+            <div id="args"></div>
             <div style="width: 100%; display: table;">
                 <div class="frame">
                     <p>Original image</p>
@@ -46,4 +49,5 @@
             </div>
         </main>
     </body>
+    <script src="scripts.js"></script>
 </html>
