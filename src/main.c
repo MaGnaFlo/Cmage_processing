@@ -2,17 +2,6 @@
 #include <microhttpd.h>
 #include "server/server.h"
 
-// temp ////////////////////////////
-#include "image/image.h"
-#include "transform/geometry.h"
-#include "transform/colors.h"
-#include <math.h>
-#include <string.h>
-#include <stdlib.h>
-#include "utils/matrix.h"
-#include "filters/filters.h"
-///////////////////////////////////
-
 int main(int argc, char **argv)
 {
     const int port = 8888;
