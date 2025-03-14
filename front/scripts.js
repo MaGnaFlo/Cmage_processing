@@ -13,10 +13,14 @@ function requestImage() {
 function transform() {
     let img_file = document.getElementById("input_file").files[0].name;
     let transform = document.getElementById("transform_select");
-    let arg = document.getElementById("spinbox").value;
-    arg = parseFloat(arg);
-    if (transform.value == "rotate") {
-        arg = arg * Math.PI / 180;
+    let spinbox = document.getElementById("spinbox");
+    let arg = 0;
+    if (spinbox) {
+        arg = document.getElementById("spinbox").value;
+        arg = parseFloat(arg);
+        if (transform.value == "rotate") {
+            arg = arg * Math.PI / 180;
+        }
     }
     fetch("/" + img_file + "/transform/" + transform.value + "/" + arg)
     .then(response => response.blob())

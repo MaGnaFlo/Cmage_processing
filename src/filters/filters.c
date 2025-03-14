@@ -100,4 +100,6 @@ bool sobel_filter(Image *grad_mag, Image *grad_angle, Image *src)
     free_image(&dI_sq);
     free_matrix(&sobel_x);
     free_matrix(&sobel_y);
+
+    return rc;
 }

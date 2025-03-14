@@ -31,59 +31,57 @@ static const char * const ERROR_PAGE = "<html><body>An internal server error has
 static const char * const TEMP_LOADED_IMG = "loaded_img.png";
 
 /// @brief defines a generic transform type
-typedef bool (*transform_fct)(Image *, Image *, void *);
+typedef bool (*transform_fct)(Image *, Image *, double);
 
 // struct of a transform, with key, function and num of extra arguments
 typedef struct Transform {
     const char * const key;
     transform_fct func;
-    int num_extra_args;
 } Transform;
 
-/// @brief Wrapper for rotation
-/// @param dest 
-/// @param src 
-/// @param args 
-/// @return 
-static bool rotate_wrapper(Image *dest, Image *src, void *args) {
-    if (!args) return false;
-    double angle = *((double *)args);
-    INTERP interp = *((INTERP *)((char *)args + sizeof(double)));
-    return rotate(dest, src, angle, interp);
+/// Some wrapper to call functions with more arguments
+static bool rotate_wrapper(Image *dest, Image *src, double angle) {
+    return rotate(dest, src, angle, INTERP_BILINEAR);
 }
 
-static bool gaussian_wrapper(Image *dest, Image *src, void *args) {
-    if (!args) return false;
-    unsigned int size = *((unsigned int *)args);
-    double sigma = *((double *)((char *)args + sizeof(unsigned int)));
-    return gaussian_filter(dest, src, size, sigma);
+static bool gaussian_wrapper(Image *dest, Image *src, double sigma) {
+    return gaussian_filter(dest, src, 19, sigma);
+}
+
+static bool sobel_wrapper(Image *dest, Image *src, double arg) {
+    Image dummy;
+    bool rc = sobel_filter(dest, &dummy, src);
+    free_image(&dummy);
+    return rc;
 }
 
 // array of transforms
 static Transform transforms[] = {
-    {.key = "rgb2gray", .func = (transform_fct)rgb_to_gray, .num_extra_args = 0},
-    {.key = "gray2rgb", .func = (transform_fct)gray_to_rgb, .num_extra_args = 0},
-    {.key = "flip_hor", .func = (transform_fct)flip_horizontal, .num_extra_args = 0},
-    {.key = "flip_ver", .func = (transform_fct)flip_vertical, .num_extra_args = 0},
-    {.key = "rotate", .func = (transform_fct)rotate_wrapper, .num_extra_args = 2},
-    {.key = "blur", .func = (transform_fct)gaussian_wrapper, .num_extra_args = 2}
-    // {.key = "edges", .func = &sobel_filter}
+    {.key = "rgb2gray", .func = (transform_fct)rgb_to_gray},
+    {.key = "gray2rgb", .func = (transform_fct)gray_to_rgb},
+    {.key = "flip_hor", .func = (transform_fct)flip_horizontal},
+    {.key = "flip_ver", .func = (transform_fct)flip_vertical},
+    {.key = "rotate", .func = (transform_fct)rotate_wrapper},
+    {.key = "blur", .func = (transform_fct)gaussian_wrapper},
+    {.key = "edges", .func = (transform_fct)sobel_wrapper}
 };
 
 /// @brief Retrieves the transform given its key
 /// @param key Transform key
 /// @return Pointer to function
-static Transform * find_transform(const char * const key)
+static transform_fct * find_transform(const char * const key)
 {
+    transform_fct *fct = NULL;
     if (sizeof(transforms) == 0) {
         return NULL;
     }
     size_t n = sizeof(transforms) / sizeof(transforms[0]);
     for (int i = 0; i < n; ++i) {
         if (strcmp(transforms[i].key, key) == 0) {
-            return &transforms[i];
+            return &transforms[i].func;
         }
     }
+    fprintf(stderr, "Could not find transform of key %s\n", key);
     return NULL;
 }
 
@@ -231,6 +229,7 @@ answer_to_transform(struct MHD_Connection *connection, const char *url)
 
     // parse url
     char *transform_key;
+    bool has_arg = false;
     double arg;
     char *url_ = strdup(url);
     char *token = strtok(url_, "/");
@@ -242,13 +241,18 @@ answer_to_transform(struct MHD_Connection *connection, const char *url)
     while (token) {
         token = strtok(NULL, "/");
         switch (i++) {
-            case 2: transform_key = strdup(token); break;
-            case 3: arg = atof(token); break;
+            case 2: 
+                transform_key = strdup(token); 
+                break;
+            case 3: 
+                arg = atof(token); 
+                has_arg = true ; 
+                break;
             default: break;
         }
     }
 
-    Transform *transform = find_transform(transform_key);
+    transform_fct *transform = find_transform(transform_key);
     if (transform == NULL) {
         perror("Unknown transform key");
         free(url_);
@@ -269,40 +273,15 @@ answer_to_transform(struct MHD_Connection *connection, const char *url)
         return MHD_NO;
     }
 
-
-    // building extra arguments // this for rotation
-    // void *extra_args = NULL;
-    // if (transform->num_extra_args > 0) {
-    //     extra_args = malloc(sizeof(double) + sizeof(INTERP));
-    //     if (!extra_args) {
-    //         perror("Memory allocation failed");
-    //         return MHD_NO;
-    //     }
-    //     *((double *)extra_args) = arg;
-    //     *((INTERP *)((char *)extra_args + sizeof(double))) = INTERP_BILINEAR;
-    // }
-    // this for blur
-    void *extra_args = NULL;
-    if (transform->num_extra_args > 0) {
-        extra_args = malloc(sizeof(unsigned int) + sizeof(double));
-        if (!extra_args) {
-            perror("Memory allocation failed");
-            return MHD_NO;
-        }
-        *((unsigned int *)extra_args) = 10;
-        *((double *)((char *)extra_args + sizeof(unsigned int))) = arg;
-
-
-    }
-
     // dest
     Image transformed_image;
-    if (!transform->func(&transformed_image, &original_image, extra_args)) {
+    if (!(*transform)(&transformed_image, &original_image, arg)) {
         free(url_);
         free(image_name);
         free(image_path);
         free(transform_key);
         free_image(&original_image);
+        printf("NO\n");
         return MHD_NO;
     }
 
